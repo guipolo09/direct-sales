@@ -1,0 +1,23 @@
+{
+  "cli": {
+    "version": ">= 16.28.0"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
+      }
+    },
+    "production": {
+      "android": {},
+      "ios": {}
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
