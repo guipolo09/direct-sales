@@ -97,13 +97,13 @@ export const EstoqueScreen = () => {
     setKitPriceManual(false);
   };
 
-  const handleQuickEntry = (productId: string) => {
-    addStockEntry(productId, 1, 'Fornecedor padrao', 35);
+  const handleQuickEntry = async (productId: string) => {
+    await addStockEntry(productId, 1, 'Fornecedor padrao', 35);
     Alert.alert('Estoque atualizado', 'Entrada de 1 unidade registrada e conta a pagar gerada.');
   };
 
-  const handleQuickAddCategoria = () => {
-    const result = addCategory(quickCategoriaNome);
+  const handleQuickAddCategoria = async () => {
+    const result = await addCategory(quickCategoriaNome);
     if (!result.ok) {
       Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
       return;
@@ -116,8 +116,8 @@ export const EstoqueScreen = () => {
     Alert.alert('Categoria cadastrada', 'Categoria adicionada e selecionada no produto.');
   };
 
-  const handleQuickAddMarca = () => {
-    const result = addBrand(quickMarcaNome);
+  const handleQuickAddMarca = async () => {
+    const result = await addBrand(quickMarcaNome);
     if (!result.ok) {
       Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
       return;
@@ -130,8 +130,8 @@ export const EstoqueScreen = () => {
     Alert.alert('Marca cadastrada', 'Marca adicionada e selecionada no produto.');
   };
 
-  const handleAddProduto = () => {
-    const result = addProduct({
+  const handleAddProduto = async () => {
+    const result = await addProduct({
       nome: nomeProduto,
       categoria: produtoCategoria ?? '',
       marca: produtoMarca ?? '',
@@ -153,8 +153,8 @@ export const EstoqueScreen = () => {
     resetCadastro();
   };
 
-  const handleAddCategoria = () => {
-    const result = addCategory(nomeCategoria);
+  const handleAddCategoria = async () => {
+    const result = await addCategory(nomeCategoria);
     if (!result.ok) {
       Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
       return;
@@ -168,8 +168,8 @@ export const EstoqueScreen = () => {
     resetCadastro();
   };
 
-  const handleAddMarca = () => {
-    const result = addBrand(nomeMarca);
+  const handleAddMarca = async () => {
+    const result = await addBrand(nomeMarca);
     if (!result.ok) {
       Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
       return;
@@ -214,8 +214,8 @@ export const EstoqueScreen = () => {
     setKitItens((prev) => prev.filter((item) => item.productId !== productId));
   };
 
-  const handleAddKit = () => {
-    const result = addKit({
+  const handleAddKit = async () => {
+    const result = await addKit({
       nome: nomeKit,
       categoria: kitCategoria ?? '',
       marca: kitMarca ?? '',
@@ -247,7 +247,7 @@ export const EstoqueScreen = () => {
       return (
         <View style={styles.card}>
           <Text style={styles.formTitle}>Cadastrar produto</Text>
-          <TextInput value={nomeProduto} onChangeText={setNomeProduto} placeholder="Nome do produto" style={styles.input} />
+          <TextInput placeholderTextColor="#9ca3af" value={nomeProduto} onChangeText={setNomeProduto} placeholder="Nome do produto" style={styles.input} />
 
           <View style={styles.labelRow}>
             <Text style={styles.label}>Categoria</Text>
@@ -282,7 +282,7 @@ export const EstoqueScreen = () => {
           ) : null}
           {showQuickCategoriaInput ? (
             <View style={styles.quickAddWrap}>
-              <TextInput
+              <TextInput placeholderTextColor="#9ca3af"
                 value={quickCategoriaNome}
                 onChangeText={setQuickCategoriaNome}
                 placeholder="Nova categoria"
@@ -327,7 +327,7 @@ export const EstoqueScreen = () => {
           ) : null}
           {showQuickMarcaInput ? (
             <View style={styles.quickAddWrap}>
-              <TextInput
+              <TextInput placeholderTextColor="#9ca3af"
                 value={quickMarcaNome}
                 onChangeText={setQuickMarcaNome}
                 placeholder="Nova marca"
@@ -339,21 +339,21 @@ export const EstoqueScreen = () => {
             </View>
           ) : null}
 
-          <TextInput
+          <TextInput placeholderTextColor="#9ca3af"
             value={precoProduto}
             onChangeText={setPrecoProduto}
             placeholder="Preco de venda"
             keyboardType="numeric"
             style={styles.input}
           />
-          <TextInput
+          <TextInput placeholderTextColor="#9ca3af"
             value={estoqueProduto}
             onChangeText={setEstoqueProduto}
             placeholder="Estoque inicial"
             keyboardType="numeric"
             style={styles.input}
           />
-          <TextInput
+          <TextInput placeholderTextColor="#9ca3af"
             value={estoqueMinimoProduto}
             onChangeText={setEstoqueMinimoProduto}
             placeholder="Estoque minimo"
@@ -376,7 +376,7 @@ export const EstoqueScreen = () => {
       return (
         <View style={styles.card}>
           <Text style={styles.formTitle}>Cadastrar categoria</Text>
-          <TextInput
+          <TextInput placeholderTextColor="#9ca3af"
             value={nomeCategoria}
             onChangeText={setNomeCategoria}
             placeholder="Nome da categoria"
@@ -398,7 +398,7 @@ export const EstoqueScreen = () => {
       return (
         <View style={styles.card}>
           <Text style={styles.formTitle}>Cadastrar marca</Text>
-          <TextInput value={nomeMarca} onChangeText={setNomeMarca} placeholder="Nome da marca" style={styles.input} />
+          <TextInput placeholderTextColor="#9ca3af" value={nomeMarca} onChangeText={setNomeMarca} placeholder="Nome da marca" style={styles.input} />
           <View style={styles.actionsRow}>
             <Pressable style={styles.secondaryButton} onPress={resetCadastro}>
               <Text style={styles.secondaryButtonText}>Cancelar</Text>
@@ -414,7 +414,7 @@ export const EstoqueScreen = () => {
     return (
       <View style={styles.card}>
         <Text style={styles.formTitle}>Cadastrar kit</Text>
-        <TextInput value={nomeKit} onChangeText={setNomeKit} placeholder="Nome do kit" style={styles.input} />
+        <TextInput placeholderTextColor="#9ca3af" value={nomeKit} onChangeText={setNomeKit} placeholder="Nome do kit" style={styles.input} />
 
         <Text style={styles.label}>Categoria</Text>
         <View style={styles.optionWrap}>
@@ -442,7 +442,7 @@ export const EstoqueScreen = () => {
           ))}
         </View>
 
-        <TextInput
+        <TextInput placeholderTextColor="#9ca3af"
           value={precoKit}
           onChangeText={(value) => {
             setKitPriceManual(true);
@@ -463,7 +463,7 @@ export const EstoqueScreen = () => {
           <Text style={styles.secondaryInlineButtonText}>Usar valor automatico</Text>
         </Pressable>
 
-        <TextInput
+        <TextInput placeholderTextColor="#9ca3af"
           value={estoqueMinimoKit}
           onChangeText={setEstoqueMinimoKit}
           placeholder="Estoque minimo do kit"
@@ -484,7 +484,7 @@ export const EstoqueScreen = () => {
           ))}
         </View>
         <View style={styles.kitRow}>
-          <TextInput
+          <TextInput placeholderTextColor="#9ca3af"
             value={kitQty}
             onChangeText={setKitQty}
             placeholder="Qtd"
@@ -653,15 +653,15 @@ export const EstoqueScreen = () => {
               <View key={item} style={styles.simpleLine}>
                 {editingCategory === item ? (
                   <View style={styles.editRow}>
-                    <TextInput
+                    <TextInput placeholderTextColor="#9ca3af"
                       value={editCategoryName}
                       onChangeText={setEditCategoryName}
                       style={[styles.input, styles.editInput]}
                     />
                     <Pressable
                       style={styles.saveEditButton}
-                      onPress={() => {
-                        const result = updateCategory(item, editCategoryName);
+                      onPress={async () => {
+                        const result = await updateCategory(item, editCategoryName);
                         if (!result.ok) {
                           Alert.alert('Erro', result.error ?? 'Erro desconhecido.');
                           return;
@@ -713,15 +713,15 @@ export const EstoqueScreen = () => {
               <View key={item} style={styles.simpleLine}>
                 {editingBrand === item ? (
                   <View style={styles.editRow}>
-                    <TextInput
+                    <TextInput placeholderTextColor="#9ca3af"
                       value={editBrandName}
                       onChangeText={setEditBrandName}
                       style={[styles.input, styles.editInput]}
                     />
                     <Pressable
                       style={styles.saveEditButton}
-                      onPress={() => {
-                        const result = updateBrand(item, editBrandName);
+                      onPress={async () => {
+                        const result = await updateBrand(item, editBrandName);
                         if (!result.ok) {
                           Alert.alert('Erro', result.error ?? 'Erro desconhecido.');
                           return;

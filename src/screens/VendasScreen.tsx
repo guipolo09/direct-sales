@@ -100,8 +100,8 @@ export const VendasScreen = () => {
     }
   };
 
-  const handleQuickAddCustomer = () => {
-    const result = addCustomer({
+  const handleQuickAddCustomer = async () => {
+    const result = await addCustomer({
       nome: quickCustomerName,
       telefone: quickCustomerPhone,
       status: 'novo'
@@ -119,7 +119,7 @@ export const VendasScreen = () => {
     Alert.alert('Cliente cadastrado', 'Cliente criado e pronto para selecao.');
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!customer) {
       Alert.alert('Sem cliente', 'Selecione ou cadastre um cliente para registrar a venda.');
       return;
@@ -130,7 +130,7 @@ export const VendasScreen = () => {
       return;
     }
 
-    const result = registerSale({
+    const result = await registerSale({
       customerId: customer.id,
       itens: saleItems,
       formaPagamento,
@@ -249,13 +249,13 @@ export const VendasScreen = () => {
             ) : null}
             {showQuickCustomerInput ? (
               <View style={styles.quickBox}>
-                <TextInput
+                <TextInput placeholderTextColor="#9ca3af"
                   value={quickCustomerName}
                   onChangeText={setQuickCustomerName}
                   placeholder="Nome do cliente"
                   style={styles.input}
                 />
-                <TextInput
+                <TextInput placeholderTextColor="#9ca3af"
                   value={quickCustomerPhone}
                   onChangeText={setQuickCustomerPhone}
                   placeholder="Telefone"
@@ -300,7 +300,7 @@ export const VendasScreen = () => {
             <Text style={styles.small}>Estoque atual: {product ? getProductStock(product.id) : 0}</Text>
 
             <Text style={styles.label}>Quantidade</Text>
-            <TextInput
+            <TextInput placeholderTextColor="#9ca3af"
               value={qtyText}
               onChangeText={setQtyText}
               style={styles.input}
@@ -379,7 +379,7 @@ export const VendasScreen = () => {
                 </View>
 
                 <Text style={styles.label}>Entrada</Text>
-                <TextInput
+                <TextInput placeholderTextColor="#9ca3af"
                   value={entradaText}
                   onChangeText={setEntradaText}
                   placeholder="0"
@@ -405,7 +405,7 @@ export const VendasScreen = () => {
                 ) : (
                   <View>
                     <Text style={styles.label}>Dia do mes para vencimento</Text>
-                    <TextInput
+                    <TextInput placeholderTextColor="#9ca3af"
                       value={dueDayText}
                       onChangeText={setDueDayText}
                       placeholder="Ex: 10"

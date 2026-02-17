@@ -8,7 +8,14 @@ import {
   Sale,
   StockMove
 } from '../types/models';
-import { loadAllData, saveSlice } from './storage';
+import { initDB } from '../services/db';
+import { ProductRepository } from '../services/ProductRepository';
+import { CustomerRepository } from '../services/CustomerRepository';
+import { SaleRepository } from '../services/SaleRepository';
+import { StockMoveRepository } from '../services/StockMoveRepository';
+import { FinancialRepository } from '../services/FinancialRepository';
+import { CategoryRepository } from '../services/CategoryRepository';
+import { BrandRepository } from '../services/BrandRepository';
 
 type AppStoreValue = {
   products: Product[];
@@ -27,7 +34,7 @@ type AppStoreValue = {
     estoqueAtual: number;
     estoqueMinimo: number;
     precoVenda: number;
-  }) => { ok: boolean; error?: string };
+  }) => Promise<{ ok: boolean; error?: string }>;
   addKit: (payload: {
     nome: string;
     categoria: string;
@@ -35,50 +42,67 @@ type AppStoreValue = {
     estoqueMinimo: number;
     precoVenda: number;
     itens: Array<{ productId: string; quantidade: number }>;
-  }) => { ok: boolean; error?: string };
-  addCategory: (nome: string) => { ok: boolean; error?: string };
-  addBrand: (nome: string) => { ok: boolean; error?: string };
+  }) => Promise<{ ok: boolean; error?: string }>;
+  addCategory: (nome: string) => Promise<{ ok: boolean; error?: string }>;
+  addBrand: (nome: string) => Promise<{ ok: boolean; error?: string }>;
   addCustomer: (payload: {
     nome: string;
     telefone: string;
     status: Customer['status'];
-  }) => { ok: boolean; id?: string; error?: string };
+  }) => Promise<{ ok: boolean; id?: string; error?: string }>;
   addManualPayable: (payload: {
     tipo: 'boleto' | 'imposto' | 'conta_fixa';
     referencia: string;
     descricao: string;
     valor: number;
     vencimento: string;
-  }) => { ok: boolean; error?: string };
+  }) => Promise<{ ok: boolean; error?: string }>;
   updatePayable: (payload: {
     id: string;
     fornecedor: string;
     descricao: string;
     valor: number;
     vencimento: string;
-  }) => { ok: boolean; error?: string };
-  registerSale: (payload: RegisterSalePayload) => { ok: boolean; error?: string };
-  addStockEntry: (productId: string, quantidade: number, fornecedor: string, custoUnitario: number) => void;
-  markReceivablePaid: (id: string) => void;
-  markPayablePaid: (id: string) => void;
-  removeProduct: (id: string) => void;
-  removeCustomer: (id: string) => void;
-  removeReceivable: (id: string) => void;
-  removePayable: (id: string) => void;
-  updateCategory: (oldName: string, newName: string) => { ok: boolean; error?: string };
-  removeCategory: (name: string) => void;
-  updateBrand: (oldName: string, newName: string) => { ok: boolean; error?: string };
-  removeBrand: (name: string) => void;
+  }) => Promise<{ ok: boolean; error?: string }>;
+  registerSale: (payload: RegisterSalePayload) => Promise<{ ok: boolean; error?: string }>;
+  addStockEntry: (productId: string, quantidade: number, fornecedor: string, custoUnitario: number) => Promise<void>;
+  markReceivablePaid: (id: string) => Promise<void>;
+  markPayablePaid: (id: string) => Promise<void>;
+  removeProduct: (id: string) => Promise<void>;
+  removeCustomer: (id: string) => Promise<void>;
+  removeReceivable: (id: string) => Promise<void>;
+  removePayable: (id: string) => Promise<void>;
+  updateCategory: (oldName: string, newName: string) => Promise<{ ok: boolean; error?: string }>;
+  removeCategory: (name: string) => Promise<void>;
+  updateBrand: (oldName: string, newName: string) => Promise<{ ok: boolean; error?: string }>;
+  removeBrand: (name: string) => Promise<void>;
 };
 
 const AppStore = createContext<AppStoreValue | undefined>(undefined);
 
 const now = () => new Date().toISOString();
 
+const toLocalDateStr = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const parseLocalDate = (value: string) => {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+  return new Date(value);
+};
+
+const isValidDateStr = (value: string) => !Number.isNaN(parseLocalDate(value).getTime());
+
 const plusDaysIso = (days: number) => {
   const dt = new Date();
   dt.setDate(dt.getDate() + days);
-  return dt.toISOString();
+  return toLocalDateStr(dt);
 };
 const generateId = () => Math.random().toString(36).slice(2, 10);
 const roundMoney = (value: number) => Math.round(value * 100) / 100;
@@ -120,62 +144,50 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
   const [receivables, setReceivables] = useState<Receivable[]>([]);
   const [payables, setPayables] = useState<Payable[]>([]);
   const [isReady, setIsReady] = useState(false);
-  const isLoadedRef = useRef(false);
+
+  const loadData = async () => {
+    try {
+        await initDB();
+        
+        const [
+            loadedProducts,
+            loadedCategories,
+            loadedBrands,
+            loadedCustomers,
+            loadedSales,
+            loadedStockMoves,
+            loadedReceivables,
+            loadedPayables
+        ] = await Promise.all([
+            ProductRepository.getAll(),
+            CategoryRepository.getAll(),
+            BrandRepository.getAll(),
+            CustomerRepository.getAll(),
+            SaleRepository.getAll(),
+            StockMoveRepository.getAll(),
+            FinancialRepository.getAllReceivables(),
+            FinancialRepository.getAllPayables()
+        ]);
+
+        setProducts(loadedProducts);
+        setCategories(loadedCategories);
+        setBrands(loadedBrands);
+        setCustomers(loadedCustomers);
+        setSales(loadedSales);
+        setStockMoves(loadedStockMoves);
+        setReceivables(loadedReceivables);
+        setPayables(loadedPayables);
+        setIsReady(true);
+    } catch (error) {
+        console.error('Failed to load data from DB:', error);
+        // Fallback or alert user
+        setIsReady(true);
+    }
+  };
 
   useEffect(() => {
-    loadAllData().then((data) => {
-      setProducts(data.products);
-      setCategories(data.categories);
-      setBrands(data.brands);
-      setCustomers(data.customers);
-      setSales(data.sales);
-      setStockMoves(data.stockMoves);
-      setReceivables(data.receivables);
-      setPayables(data.payables);
-      isLoadedRef.current = true;
-      setIsReady(true);
-    });
+    loadData();
   }, []);
-
-  useEffect(() => {
-    if (!isLoadedRef.current) return;
-    saveSlice('products', products);
-  }, [products]);
-
-  useEffect(() => {
-    if (!isLoadedRef.current) return;
-    saveSlice('categories', categories);
-  }, [categories]);
-
-  useEffect(() => {
-    if (!isLoadedRef.current) return;
-    saveSlice('brands', brands);
-  }, [brands]);
-
-  useEffect(() => {
-    if (!isLoadedRef.current) return;
-    saveSlice('customers', customers);
-  }, [customers]);
-
-  useEffect(() => {
-    if (!isLoadedRef.current) return;
-    saveSlice('sales', sales);
-  }, [sales]);
-
-  useEffect(() => {
-    if (!isLoadedRef.current) return;
-    saveSlice('stockMoves', stockMoves);
-  }, [stockMoves]);
-
-  useEffect(() => {
-    if (!isLoadedRef.current) return;
-    saveSlice('receivables', receivables);
-  }, [receivables]);
-
-  useEffect(() => {
-    if (!isLoadedRef.current) return;
-    saveSlice('payables', payables);
-  }, [payables]);
 
   const getProductStock = (productId: string) => {
     const product = products.find((item) => item.id === productId);
@@ -190,7 +202,7 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
     return product.estoqueAtual;
   };
 
-  const addCategory = (nome: string) => {
+  const addCategory = async (nome: string) => {
     const normalized = nome.trim();
     if (!normalized) {
       return { ok: false, error: 'Informe o nome da categoria.' };
@@ -200,11 +212,12 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       return { ok: false, error: 'Categoria ja cadastrada.' };
     }
 
+    await CategoryRepository.add(normalized);
     setCategories((prev) => [normalized, ...prev]);
     return { ok: true };
   };
 
-  const addBrand = (nome: string) => {
+  const addBrand = async (nome: string) => {
     const normalized = nome.trim();
     if (!normalized) {
       return { ok: false, error: 'Informe o nome da marca.' };
@@ -214,11 +227,12 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       return { ok: false, error: 'Marca ja cadastrada.' };
     }
 
+    await BrandRepository.add(normalized);
     setBrands((prev) => [normalized, ...prev]);
     return { ok: true };
   };
 
-  const addProduct = (payload: {
+  const addProduct = async (payload: {
     nome: string;
     categoria: string;
     marca: string;
@@ -257,11 +271,12 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       precoVenda: payload.precoVenda
     };
 
+    await ProductRepository.create(product);
     setProducts((prev) => [product, ...prev]);
     return { ok: true };
   };
 
-  const addKit = (payload: {
+  const addKit = async (payload: {
     nome: string;
     categoria: string;
     marca: string;
@@ -310,11 +325,12 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       kitItens: payload.itens
     };
 
+    await ProductRepository.create(kit);
     setProducts((prev) => [kit, ...prev]);
     return { ok: true };
   };
 
-  const addCustomer = (payload: { nome: string; telefone: string; status: Customer['status'] }) => {
+  const addCustomer = async (payload: { nome: string; telefone: string; status: Customer['status'] }) => {
     if (!payload.nome.trim()) {
       return { ok: false, error: 'Informe o nome do cliente.' };
     }
@@ -327,11 +343,12 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       createdAt: now()
     };
 
+    await CustomerRepository.create(customer);
     setCustomers((prev) => [customer, ...prev]);
     return { ok: true, id: customer.id };
   };
 
-  const addManualPayable = (payload: {
+  const addManualPayable = async (payload: {
     tipo: 'boleto' | 'imposto' | 'conta_fixa';
     referencia: string;
     descricao: string;
@@ -346,8 +363,7 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       return { ok: false, error: 'Valor deve ser maior que zero.' };
     }
 
-    const dueDate = new Date(payload.vencimento);
-    if (Number.isNaN(dueDate.getTime())) {
+    if (!isValidDateStr(payload.vencimento)) {
       return { ok: false, error: 'Data de vencimento invalida. Use formato YYYY-MM-DD.' };
     }
 
@@ -357,22 +373,22 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       ? `${tipoLabel} - ${payload.referencia.trim()}`
       : tipoLabel;
 
-    setPayables((prev) => [
-      {
-        id: generateId(),
-        fornecedor,
-        descricao: payload.descricao.trim(),
-        valor: payload.valor,
-        vencimento: dueDate.toISOString(),
-        status: 'pendente'
-      },
-      ...prev
-    ]);
+    const payable: Payable = {
+      id: generateId(),
+      fornecedor,
+      descricao: payload.descricao.trim(),
+      valor: payload.valor,
+      vencimento: payload.vencimento,
+      status: 'pendente'
+    };
+
+    await FinancialRepository.createPayable(payable);
+    setPayables((prev) => [payable, ...prev]);
 
     return { ok: true };
   };
 
-  const updatePayable = (payload: {
+  const updatePayable = async (payload: {
     id: string;
     fornecedor: string;
     descricao: string;
@@ -387,39 +403,33 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       return { ok: false, error: 'Valor deve ser maior que zero.' };
     }
 
-    const dueDate = new Date(payload.vencimento);
-    if (Number.isNaN(dueDate.getTime())) {
+    if (!isValidDateStr(payload.vencimento)) {
       return { ok: false, error: 'Data de vencimento invalida.' };
     }
 
-    let found = false;
-    setPayables((prev) =>
-      prev.map((item) => {
-        if (item.id !== payload.id) {
-          return item;
-        }
-        found = true;
-        if (item.status === 'paga') {
-          return item;
-        }
-        return {
-          ...item,
-          fornecedor: payload.fornecedor.trim() || item.fornecedor,
-          descricao: payload.descricao.trim(),
-          valor: payload.valor,
-          vencimento: dueDate.toISOString()
-        };
-      })
-    );
-
-    if (!found) {
-      return { ok: false, error: 'Conta nao encontrada.' };
+    const existing = payables.find(p => p.id === payload.id);
+    if (!existing) {
+        return { ok: false, error: 'Conta nao encontrada.' };
     }
+
+    const updated: Payable = {
+        ...existing,
+        fornecedor: payload.fornecedor.trim() || existing.fornecedor,
+        descricao: payload.descricao.trim(),
+        valor: payload.valor,
+        vencimento: payload.vencimento
+    };
+    
+    await FinancialRepository.updatePayable(updated);
+
+    setPayables((prev) =>
+      prev.map((item) => (item.id === payload.id ? updated : item))
+    );
 
     return { ok: true };
   };
 
-  const registerSale = (payload: RegisterSalePayload) => {
+  const registerSale = async (payload: RegisterSalePayload) => {
     if (!payload.itens.length) {
       return { ok: false, error: 'Adicione ao menos um item na venda.' };
     }
@@ -502,8 +512,7 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
           if (!config.primeiraData) {
             return { ok: false, error: 'Informe a data de vencimento para parcela unica.' };
           }
-          const dueDate = new Date(config.primeiraData);
-          if (Number.isNaN(dueDate.getTime())) {
+          if (!isValidDateStr(config.primeiraData)) {
             return { ok: false, error: 'Data de vencimento invalida.' };
           }
 
@@ -513,7 +522,7 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
               customerId: payload.customerId,
               descricao: `Venda (${saleDesc}) (1/1)`,
               valor: financiado,
-              vencimento: dueDate.toISOString(),
+              vencimento: config.primeiraData,
               status: 'pendente'
             }
           ];
@@ -537,7 +546,7 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
               customerId: payload.customerId,
               descricao: `Venda (${saleDesc}) (${index + 1}/${parcelas})`,
               valor: installmentValue,
-              vencimento: dueDate.toISOString(),
+              vencimento: toLocalDateStr(dueDate),
               status: 'pendente' as const
             };
           });
@@ -545,6 +554,16 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       }
     }
 
+    // Update products stock in DB
+    for (const [productId, deduction] of baseProductDeductions.entries()) {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+            const newStock = product.estoqueAtual - deduction;
+            await ProductRepository.updateStock(productId, newStock);
+        }
+    }
+
+    // Update products state
     setProducts((prev) =>
       prev.map((item) => {
         if (item.tipo !== 'produto') {
@@ -587,6 +606,9 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
         }
       }
     }
+    
+    // Save stock moves
+    await StockMoveRepository.createBatch(newMoves);
     setStockMoves((prev) => [...newMoves, ...prev]);
 
     const sale: Sale = {
@@ -603,20 +625,28 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       formaPagamento: payload.formaPagamento
     };
 
+    await SaleRepository.create(sale);
     setSales((prev) => [sale, ...prev]);
 
     if (receivableItems.length > 0) {
+      await FinancialRepository.createReceivables(receivableItems);
       setReceivables((prev) => [...receivableItems, ...prev]);
     }
 
     return { ok: true };
   };
 
-  const addStockEntry = (productId: string, quantidade: number, fornecedor: string, custoUnitario: number) => {
+  const addStockEntry = async (productId: string, quantidade: number, fornecedor: string, custoUnitario: number) => {
     if (quantidade <= 0) {
       return;
     }
 
+    const product = products.find(p => p.id === productId && p.tipo === 'produto');
+    if (product) {
+         const newStock = product.estoqueAtual + quantidade;
+         await ProductRepository.updateStock(productId, newStock);
+    }
+    
     setProducts((prev) =>
       prev.map((item) =>
         item.id === productId && item.tipo === 'produto'
@@ -628,58 +658,72 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       )
     );
 
-    setStockMoves((prev) => [
-      {
+    const move: StockMove = {
         id: generateId(),
         productId,
         tipo: 'entrada',
         quantidade,
         data: now(),
         origem: `Compra ${fornecedor}`
-      },
-      ...prev
-    ]);
+    };
 
-    setPayables((prev) => [
-      {
+    await StockMoveRepository.create(move);
+    setStockMoves((prev) => [move, ...prev]);
+
+    const payable: Payable = {
         id: generateId(),
         fornecedor,
         descricao: `Reposicao de estoque (${quantidade} itens)`,
         valor: quantidade * custoUnitario,
         vencimento: plusDaysIso(30),
         status: 'pendente'
-      },
-      ...prev
-    ]);
+    };
+
+    await FinancialRepository.createPayable(payable);
+    setPayables((prev) => [payable, ...prev]);
   };
 
-  const markReceivablePaid = (id: string) => {
-    setReceivables((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: 'paga', paidAt: now() } : item))
-    );
+  const markReceivablePaid = async (id: string) => {
+    const receivable = receivables.find(r => r.id === id);
+    if (receivable) {
+        const updated = { ...receivable, status: 'paga' as const, paidAt: now() };
+        await FinancialRepository.updateReceivable(updated);
+        setReceivables((prev) =>
+          prev.map((item) => (item.id === id ? updated : item))
+        );
+    }
   };
 
-  const markPayablePaid = (id: string) => {
-    setPayables((prev) => prev.map((item) => (item.id === id ? { ...item, status: 'paga', paidAt: now() } : item)));
+  const markPayablePaid = async (id: string) => {
+    const payable = payables.find(p => p.id === id);
+    if (payable) {
+        const updated = { ...payable, status: 'paga' as const, paidAt: now() };
+        await FinancialRepository.updatePayable(updated);
+        setPayables((prev) => prev.map((item) => (item.id === id ? updated : item)));
+    }
   };
 
-  const removeProduct = (id: string) => {
+  const removeProduct = async (id: string) => {
+    await ProductRepository.delete(id);
     setProducts((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const removeCustomer = (id: string) => {
+  const removeCustomer = async (id: string) => {
+    await CustomerRepository.delete(id);
     setCustomers((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const removeReceivable = (id: string) => {
+  const removeReceivable = async (id: string) => {
+    await FinancialRepository.removeReceivable(id);
     setReceivables((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const removePayable = (id: string) => {
+  const removePayable = async (id: string) => {
+    await FinancialRepository.removePayable(id);
     setPayables((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const updateCategory = (oldName: string, newName: string) => {
+  const updateCategory = async (oldName: string, newName: string) => {
     const normalized = newName.trim();
     if (!normalized) {
       return { ok: false, error: 'Informe o nome da categoria.' };
@@ -687,6 +731,9 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
     if (categories.some((item) => item.toLowerCase() === normalized.toLowerCase() && item !== oldName)) {
       return { ok: false, error: 'Categoria ja cadastrada.' };
     }
+    
+    await CategoryRepository.update(oldName, normalized);
+
     setCategories((prev) => prev.map((item) => (item === oldName ? normalized : item)));
     setProducts((prev) =>
       prev.map((item) => (item.categoria === oldName ? { ...item, categoria: normalized } : item))
@@ -694,11 +741,12 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
     return { ok: true };
   };
 
-  const removeCategory = (name: string) => {
+  const removeCategory = async (name: string) => {
+    await CategoryRepository.remove(name);
     setCategories((prev) => prev.filter((item) => item !== name));
   };
 
-  const updateBrand = (oldName: string, newName: string) => {
+  const updateBrand = async (oldName: string, newName: string) => {
     const normalized = newName.trim();
     if (!normalized) {
       return { ok: false, error: 'Informe o nome da marca.' };
@@ -706,6 +754,9 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
     if (brands.some((item) => item.toLowerCase() === normalized.toLowerCase() && item !== oldName)) {
       return { ok: false, error: 'Marca ja cadastrada.' };
     }
+    
+    await BrandRepository.update(oldName, normalized);
+    
     setBrands((prev) => prev.map((item) => (item === oldName ? normalized : item)));
     setProducts((prev) =>
       prev.map((item) => (item.marca === oldName ? { ...item, marca: normalized } : item))
@@ -713,7 +764,8 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
     return { ok: true };
   };
 
-  const removeBrand = (name: string) => {
+  const removeBrand = async (name: string) => {
+    await BrandRepository.remove(name);
     setBrands((prev) => prev.filter((item) => item !== name));
   };
 

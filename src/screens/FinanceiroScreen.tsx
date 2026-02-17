@@ -69,8 +69,8 @@ export const FinanceiroScreen = () => {
     }
   };
 
-  const handleSavePayable = () => {
-    const result = addManualPayable({
+  const handleSavePayable = async () => {
+    const result = await addManualPayable({
       tipo,
       referencia,
       descricao,
@@ -111,12 +111,12 @@ export const FinanceiroScreen = () => {
     setShowEditDatePicker(false);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingId) {
       return;
     }
 
-    const result = updatePayable({
+    const result = await updatePayable({
       id: editingId,
       fornecedor: editFornecedor,
       descricao: editDescricao,
@@ -199,19 +199,19 @@ export const FinanceiroScreen = () => {
               </Pressable>
             </View>
 
-            <TextInput
+            <TextInput placeholderTextColor="#9ca3af"
               value={referencia}
               onChangeText={setReferencia}
               placeholder="Referencia (ex: Energia, DAS, Aluguel)"
               style={styles.input}
             />
-            <TextInput
+            <TextInput placeholderTextColor="#9ca3af"
               value={descricao}
               onChangeText={setDescricao}
               placeholder="Descricao da conta"
               style={styles.input}
             />
-            <TextInput
+            <TextInput placeholderTextColor="#9ca3af"
               value={valor}
               onChangeText={setValor}
               placeholder="Valor"
@@ -283,9 +283,9 @@ export const FinanceiroScreen = () => {
               <View key={item.id} style={styles.rowItem}>
                 {editingId === item.id ? (
                   <View>
-                    <TextInput value={editFornecedor} onChangeText={setEditFornecedor} style={styles.input} placeholder="Referencia" />
-                    <TextInput value={editDescricao} onChangeText={setEditDescricao} style={styles.input} placeholder="Descricao" />
-                    <TextInput value={editValor} onChangeText={setEditValor} style={styles.input} placeholder="Valor" keyboardType="numeric" />
+                    <TextInput placeholderTextColor="#9ca3af" value={editFornecedor} onChangeText={setEditFornecedor} style={styles.input} placeholder="Referencia" />
+                    <TextInput placeholderTextColor="#9ca3af" value={editDescricao} onChangeText={setEditDescricao} style={styles.input} placeholder="Descricao" />
+                    <TextInput placeholderTextColor="#9ca3af" value={editValor} onChangeText={setEditValor} style={styles.input} placeholder="Valor" keyboardType="numeric" />
 
                     <Text style={styles.label}>Vencimento</Text>
                     <Pressable style={styles.dateButton} onPress={() => setShowEditDatePicker(true)}>

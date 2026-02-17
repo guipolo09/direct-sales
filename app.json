@@ -30,7 +30,13 @@
     },
     "plugins": [
       "expo-asset",
-      "@react-native-community/datetimepicker"
-    ]
+      "@react-native-community/datetimepicker",
+      "expo-sqlite"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "53079a59-dd5b-49e7-8d57-87e62b30d87f"
+      }
+    }
   }
 }

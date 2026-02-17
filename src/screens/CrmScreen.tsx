@@ -39,8 +39,8 @@ export const CrmScreen = () => {
     );
   };
 
-  const handleAddCustomer = () => {
-    const result = addCustomer({ nome, telefone, status });
+  const handleAddCustomer = async () => {
+    const result = await addCustomer({ nome, telefone, status });
     if (!result.ok) {
       Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
       return;
@@ -65,8 +65,8 @@ export const CrmScreen = () => {
         {showForm ? (
           <View style={styles.card}>
             <Text style={styles.formTitle}>Cadastrar cliente</Text>
-            <TextInput value={nome} onChangeText={setNome} placeholder="Nome do cliente" style={styles.input} />
-            <TextInput
+            <TextInput placeholderTextColor="#9ca3af" value={nome} onChangeText={setNome} placeholder="Nome do cliente" style={styles.input} />
+            <TextInput placeholderTextColor="#9ca3af"
               value={telefone}
               onChangeText={setTelefone}
               placeholder="Telefone"
