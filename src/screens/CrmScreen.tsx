@@ -40,16 +40,20 @@ export const CrmScreen = () => {
   };
 
   const handleAddCustomer = async () => {
-    const result = await addCustomer({ nome, telefone, status });
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
-      return;
-    }
+    try {
+      const result = await addCustomer({ nome, telefone, status });
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
+        return;
+      }
 
-    setNome('');
-    setTelefone('');
-    setStatus('novo');
-    Alert.alert('Cliente cadastrado', 'Cliente adicionado com sucesso.');
+      setNome('');
+      setTelefone('');
+      setStatus('novo');
+      Alert.alert('Cliente cadastrado', 'Cliente adicionado com sucesso.');
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao cadastrar cliente.');
+    }
   };
 
   return (

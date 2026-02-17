@@ -1,4 +1,5 @@
 ﻿import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 import {
   Customer,
   Payable,
@@ -178,9 +179,9 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
         setReceivables(loadedReceivables);
         setPayables(loadedPayables);
         setIsReady(true);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Failed to load data from DB:', error);
-        // Fallback or alert user
+        Alert.alert('Erro ao carregar dados', error?.message ?? 'Erro desconhecido ao inicializar o banco de dados.');
         setIsReady(true);
     }
   };
@@ -212,7 +213,11 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       return { ok: false, error: 'Categoria ja cadastrada.' };
     }
 
-    await CategoryRepository.add(normalized);
+    try {
+      await CategoryRepository.add(normalized);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao salvar categoria.' };
+    }
     setCategories((prev) => [normalized, ...prev]);
     return { ok: true };
   };
@@ -227,7 +232,11 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       return { ok: false, error: 'Marca ja cadastrada.' };
     }
 
-    await BrandRepository.add(normalized);
+    try {
+      await BrandRepository.add(normalized);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao salvar marca.' };
+    }
     setBrands((prev) => [normalized, ...prev]);
     return { ok: true };
   };
@@ -271,7 +280,11 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       precoVenda: payload.precoVenda
     };
 
-    await ProductRepository.create(product);
+    try {
+      await ProductRepository.create(product);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao salvar produto.' };
+    }
     setProducts((prev) => [product, ...prev]);
     return { ok: true };
   };
@@ -325,7 +338,11 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       kitItens: payload.itens
     };
 
-    await ProductRepository.create(kit);
+    try {
+      await ProductRepository.create(kit);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao salvar kit.' };
+    }
     setProducts((prev) => [kit, ...prev]);
     return { ok: true };
   };
@@ -343,7 +360,11 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       createdAt: now()
     };
 
-    await CustomerRepository.create(customer);
+    try {
+      await CustomerRepository.create(customer);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao salvar cliente.' };
+    }
     setCustomers((prev) => [customer, ...prev]);
     return { ok: true, id: customer.id };
   };
@@ -382,7 +403,11 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       status: 'pendente'
     };
 
-    await FinancialRepository.createPayable(payable);
+    try {
+      await FinancialRepository.createPayable(payable);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao salvar conta.' };
+    }
     setPayables((prev) => [payable, ...prev]);
 
     return { ok: true };
@@ -420,7 +445,11 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
         vencimento: payload.vencimento
     };
     
-    await FinancialRepository.updatePayable(updated);
+    try {
+      await FinancialRepository.updatePayable(updated);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao atualizar conta.' };
+    }
 
     setPayables((prev) =>
       prev.map((item) => (item.id === payload.id ? updated : item))
@@ -554,83 +583,86 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       }
     }
 
-    // Update products stock in DB
-    for (const [productId, deduction] of baseProductDeductions.entries()) {
-        const product = products.find(p => p.id === productId);
-        if (product) {
-            const newStock = product.estoqueAtual - deduction;
-            await ProductRepository.updateStock(productId, newStock);
-        }
-    }
+    try {
+      // Update products stock in DB
+      for (const [productId, deduction] of baseProductDeductions.entries()) {
+          const product = products.find(p => p.id === productId);
+          if (product) {
+              const newStock = product.estoqueAtual - deduction;
+              await ProductRepository.updateStock(productId, newStock);
+          }
+      }
 
-    // Update products state
-    setProducts((prev) =>
-      prev.map((item) => {
-        if (item.tipo !== 'produto') {
-          return item;
-        }
-
-        const deduction = baseProductDeductions.get(item.id);
-        if (!deduction) {
-          return item;
-        }
-
-        return {
-          ...item,
-          estoqueAtual: item.estoqueAtual - deduction
-        };
-      })
-    );
-
-    const newMoves: StockMove[] = [];
-    for (const item of typedSaleItems) {
-      if (item.product.tipo === 'produto') {
-        newMoves.push({
-          id: generateId(),
-          productId: item.product.id,
-          tipo: 'saida',
-          quantidade: item.quantidade,
-          data: now(),
-          origem: 'Venda'
-        });
-      } else {
-        for (const kitItem of item.product.kitItens ?? []) {
+      const newMoves: StockMove[] = [];
+      for (const item of typedSaleItems) {
+        if (item.product.tipo === 'produto') {
           newMoves.push({
             id: generateId(),
-            productId: kitItem.productId,
+            productId: item.product.id,
             tipo: 'saida',
-            quantidade: kitItem.quantidade * item.quantidade,
+            quantidade: item.quantidade,
             data: now(),
-            origem: `Venda kit ${item.product.nome}`
+            origem: 'Venda'
           });
+        } else {
+          for (const kitItem of item.product.kitItens ?? []) {
+            newMoves.push({
+              id: generateId(),
+              productId: kitItem.productId,
+              tipo: 'saida',
+              quantidade: kitItem.quantidade * item.quantidade,
+              data: now(),
+              origem: `Venda kit ${item.product.nome}`
+            });
+          }
         }
       }
-    }
-    
-    // Save stock moves
-    await StockMoveRepository.createBatch(newMoves);
-    setStockMoves((prev) => [...newMoves, ...prev]);
 
-    const sale: Sale = {
-      id: generateId(),
-      customerId: payload.customerId,
-      itens: typedSaleItems.map((item) => ({
-        productId: item.product.id,
-        quantidade: item.quantidade,
-        valorUnitario: item.valorUnitario
-      })),
-      total,
-      valorEntrada: payload.formaPagamento === 'prazo' ? roundMoney(payload.prazoConfig?.entrada ?? 0) : 0,
-      data: now(),
-      formaPagamento: payload.formaPagamento
-    };
+      await StockMoveRepository.createBatch(newMoves);
 
-    await SaleRepository.create(sale);
-    setSales((prev) => [sale, ...prev]);
+      const sale: Sale = {
+        id: generateId(),
+        customerId: payload.customerId,
+        itens: typedSaleItems.map((item) => ({
+          productId: item.product.id,
+          quantidade: item.quantidade,
+          valorUnitario: item.valorUnitario
+        })),
+        total,
+        valorEntrada: payload.formaPagamento === 'prazo' ? roundMoney(payload.prazoConfig?.entrada ?? 0) : 0,
+        data: now(),
+        formaPagamento: payload.formaPagamento
+      };
 
-    if (receivableItems.length > 0) {
-      await FinancialRepository.createReceivables(receivableItems);
-      setReceivables((prev) => [...receivableItems, ...prev]);
+      await SaleRepository.create(sale);
+
+      if (receivableItems.length > 0) {
+        await FinancialRepository.createReceivables(receivableItems);
+      }
+
+      // Only update state after all DB operations succeed
+      setProducts((prev) =>
+        prev.map((item) => {
+          if (item.tipo !== 'produto') {
+            return item;
+          }
+          const deduction = baseProductDeductions.get(item.id);
+          if (!deduction) {
+            return item;
+          }
+          return {
+            ...item,
+            estoqueAtual: item.estoqueAtual - deduction
+          };
+        })
+      );
+      setStockMoves((prev) => [...newMoves, ...prev]);
+      setSales((prev) => [sale, ...prev]);
+      if (receivableItems.length > 0) {
+        setReceivables((prev) => [...receivableItems, ...prev]);
+      }
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao registrar venda no banco de dados.' };
     }
 
     return { ok: true };
@@ -641,86 +673,112 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       return;
     }
 
-    const product = products.find(p => p.id === productId && p.tipo === 'produto');
-    if (product) {
-         const newStock = product.estoqueAtual + quantidade;
-         await ProductRepository.updateStock(productId, newStock);
+    try {
+      const product = products.find(p => p.id === productId && p.tipo === 'produto');
+      if (product) {
+           const newStock = product.estoqueAtual + quantidade;
+           await ProductRepository.updateStock(productId, newStock);
+      }
+
+      const move: StockMove = {
+          id: generateId(),
+          productId,
+          tipo: 'entrada',
+          quantidade,
+          data: now(),
+          origem: `Compra ${fornecedor}`
+      };
+
+      await StockMoveRepository.create(move);
+
+      const payable: Payable = {
+          id: generateId(),
+          fornecedor,
+          descricao: `Reposicao de estoque (${quantidade} itens)`,
+          valor: quantidade * custoUnitario,
+          vencimento: plusDaysIso(30),
+          status: 'pendente'
+      };
+
+      await FinancialRepository.createPayable(payable);
+
+      // Only update state after all DB operations succeed
+      setProducts((prev) =>
+        prev.map((item) =>
+          item.id === productId && item.tipo === 'produto'
+            ? { ...item, estoqueAtual: item.estoqueAtual + quantidade }
+            : item
+        )
+      );
+      setStockMoves((prev) => [move, ...prev]);
+      setPayables((prev) => [payable, ...prev]);
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao registrar entrada de estoque.');
     }
-    
-    setProducts((prev) =>
-      prev.map((item) =>
-        item.id === productId && item.tipo === 'produto'
-          ? {
-              ...item,
-              estoqueAtual: item.estoqueAtual + quantidade
-            }
-          : item
-      )
-    );
-
-    const move: StockMove = {
-        id: generateId(),
-        productId,
-        tipo: 'entrada',
-        quantidade,
-        data: now(),
-        origem: `Compra ${fornecedor}`
-    };
-
-    await StockMoveRepository.create(move);
-    setStockMoves((prev) => [move, ...prev]);
-
-    const payable: Payable = {
-        id: generateId(),
-        fornecedor,
-        descricao: `Reposicao de estoque (${quantidade} itens)`,
-        valor: quantidade * custoUnitario,
-        vencimento: plusDaysIso(30),
-        status: 'pendente'
-    };
-
-    await FinancialRepository.createPayable(payable);
-    setPayables((prev) => [payable, ...prev]);
   };
 
   const markReceivablePaid = async (id: string) => {
-    const receivable = receivables.find(r => r.id === id);
-    if (receivable) {
-        const updated = { ...receivable, status: 'paga' as const, paidAt: now() };
-        await FinancialRepository.updateReceivable(updated);
-        setReceivables((prev) =>
-          prev.map((item) => (item.id === id ? updated : item))
-        );
+    try {
+      const receivable = receivables.find(r => r.id === id);
+      if (receivable) {
+          const updated = { ...receivable, status: 'paga' as const, paidAt: now() };
+          await FinancialRepository.updateReceivable(updated);
+          setReceivables((prev) =>
+            prev.map((item) => (item.id === id ? updated : item))
+          );
+      }
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao marcar como paga.');
     }
   };
 
   const markPayablePaid = async (id: string) => {
-    const payable = payables.find(p => p.id === id);
-    if (payable) {
-        const updated = { ...payable, status: 'paga' as const, paidAt: now() };
-        await FinancialRepository.updatePayable(updated);
-        setPayables((prev) => prev.map((item) => (item.id === id ? updated : item)));
+    try {
+      const payable = payables.find(p => p.id === id);
+      if (payable) {
+          const updated = { ...payable, status: 'paga' as const, paidAt: now() };
+          await FinancialRepository.updatePayable(updated);
+          setPayables((prev) => prev.map((item) => (item.id === id ? updated : item)));
+      }
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao marcar como paga.');
     }
   };
 
   const removeProduct = async (id: string) => {
-    await ProductRepository.delete(id);
-    setProducts((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await ProductRepository.delete(id);
+      setProducts((prev) => prev.filter((item) => item.id !== id));
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao excluir produto.');
+    }
   };
 
   const removeCustomer = async (id: string) => {
-    await CustomerRepository.delete(id);
-    setCustomers((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await CustomerRepository.delete(id);
+      setCustomers((prev) => prev.filter((item) => item.id !== id));
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao excluir cliente.');
+    }
   };
 
   const removeReceivable = async (id: string) => {
-    await FinancialRepository.removeReceivable(id);
-    setReceivables((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await FinancialRepository.removeReceivable(id);
+      setReceivables((prev) => prev.filter((item) => item.id !== id));
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao excluir recebivel.');
+    }
   };
 
   const removePayable = async (id: string) => {
-    await FinancialRepository.removePayable(id);
-    setPayables((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await FinancialRepository.removePayable(id);
+      setPayables((prev) => prev.filter((item) => item.id !== id));
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao excluir conta.');
+    }
   };
 
   const updateCategory = async (oldName: string, newName: string) => {
@@ -732,7 +790,11 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       return { ok: false, error: 'Categoria ja cadastrada.' };
     }
     
-    await CategoryRepository.update(oldName, normalized);
+    try {
+      await CategoryRepository.update(oldName, normalized);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao atualizar categoria.' };
+    }
 
     setCategories((prev) => prev.map((item) => (item === oldName ? normalized : item)));
     setProducts((prev) =>
@@ -742,8 +804,12 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
   };
 
   const removeCategory = async (name: string) => {
-    await CategoryRepository.remove(name);
-    setCategories((prev) => prev.filter((item) => item !== name));
+    try {
+      await CategoryRepository.remove(name);
+      setCategories((prev) => prev.filter((item) => item !== name));
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao excluir categoria.');
+    }
   };
 
   const updateBrand = async (oldName: string, newName: string) => {
@@ -755,8 +821,12 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       return { ok: false, error: 'Marca ja cadastrada.' };
     }
     
-    await BrandRepository.update(oldName, normalized);
-    
+    try {
+      await BrandRepository.update(oldName, normalized);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao atualizar marca.' };
+    }
+
     setBrands((prev) => prev.map((item) => (item === oldName ? normalized : item)));
     setProducts((prev) =>
       prev.map((item) => (item.marca === oldName ? { ...item, marca: normalized } : item))
@@ -765,8 +835,12 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
   };
 
   const removeBrand = async (name: string) => {
-    await BrandRepository.remove(name);
-    setBrands((prev) => prev.filter((item) => item !== name));
+    try {
+      await BrandRepository.remove(name);
+      setBrands((prev) => prev.filter((item) => item !== name));
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao excluir marca.');
+    }
   };
 
   const value = useMemo(

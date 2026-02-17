@@ -8,9 +8,10 @@ export const getDB = async () => {
 
 export const initDB = async () => {
     const db = await getDB();
-    await db.execAsync(`
-      PRAGMA foreign_keys = ON;
 
+    await db.execAsync(`PRAGMA foreign_keys = ON;`);
+
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
         nome TEXT NOT NULL,
@@ -21,7 +22,9 @@ export const initDB = async () => {
         estoqueMinimo INTEGER NOT NULL DEFAULT 0,
         precoVenda REAL NOT NULL
       );
+    `);
 
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS kit_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         kitId TEXT NOT NULL,
@@ -30,7 +33,9 @@ export const initDB = async () => {
         FOREIGN KEY (kitId) REFERENCES products(id),
         FOREIGN KEY (productId) REFERENCES products(id)
       );
+    `);
 
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS customers (
         id TEXT PRIMARY KEY,
         nome TEXT NOT NULL,
@@ -39,7 +44,9 @@ export const initDB = async () => {
         createdAt TEXT,
         observacoes TEXT
       );
+    `);
 
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS sales (
         id TEXT PRIMARY KEY,
         customerId TEXT,
@@ -49,7 +56,9 @@ export const initDB = async () => {
         formaPagamento TEXT,
         FOREIGN KEY (customerId) REFERENCES customers(id)
       );
+    `);
 
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS sale_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         saleId TEXT NOT NULL,
@@ -59,17 +68,21 @@ export const initDB = async () => {
         FOREIGN KEY (saleId) REFERENCES sales(id),
         FOREIGN KEY (productId) REFERENCES products(id)
       );
+    `);
 
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS stock_moves (
         id TEXT PRIMARY KEY,
         productId TEXT NOT NULL,
-        tipo TEXT NOT NULL, 
+        tipo TEXT NOT NULL,
         quantidade INTEGER NOT NULL,
         data TEXT NOT NULL,
         origem TEXT,
         FOREIGN KEY (productId) REFERENCES products(id)
       );
+    `);
 
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS receivables (
         id TEXT PRIMARY KEY,
         customerId TEXT NOT NULL,
@@ -80,7 +93,9 @@ export const initDB = async () => {
         paidAt TEXT,
         FOREIGN KEY (customerId) REFERENCES customers(id)
       );
+    `);
 
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS payables (
         id TEXT PRIMARY KEY,
         fornecedor TEXT,
@@ -90,17 +105,19 @@ export const initDB = async () => {
         status TEXT NOT NULL,
         paidAt TEXT
       );
+    `);
 
-      -- Categories and Brands can be inferred or stored separately. 
-      -- For now we can extract them from products but AppStore treats them as separate lists.
-      -- Let's add tables for them to persist user-added categories/brands even if no product uses them.
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS categories (
         name TEXT PRIMARY KEY
       );
+    `);
 
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS brands (
         name TEXT PRIMARY KEY
       );
     `);
+
     console.log('Database v2 initialized successfully');
 };

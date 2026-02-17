@@ -98,89 +98,113 @@ export const EstoqueScreen = () => {
   };
 
   const handleQuickEntry = async (productId: string) => {
-    await addStockEntry(productId, 1, 'Fornecedor padrao', 35);
-    Alert.alert('Estoque atualizado', 'Entrada de 1 unidade registrada e conta a pagar gerada.');
+    try {
+      await addStockEntry(productId, 1, 'Fornecedor padrao', 35);
+      Alert.alert('Estoque atualizado', 'Entrada de 1 unidade registrada e conta a pagar gerada.');
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao registrar entrada.');
+    }
   };
 
   const handleQuickAddCategoria = async () => {
-    const result = await addCategory(quickCategoriaNome);
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
-      return;
-    }
+    try {
+      const result = await addCategory(quickCategoriaNome);
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
+        return;
+      }
 
-    const normalized = quickCategoriaNome.trim();
-    setProdutoCategoria(normalized);
-    setQuickCategoriaNome('');
-    setShowQuickCategoriaInput(false);
-    Alert.alert('Categoria cadastrada', 'Categoria adicionada e selecionada no produto.');
+      const normalized = quickCategoriaNome.trim();
+      setProdutoCategoria(normalized);
+      setQuickCategoriaNome('');
+      setShowQuickCategoriaInput(false);
+      Alert.alert('Categoria cadastrada', 'Categoria adicionada e selecionada no produto.');
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao cadastrar categoria.');
+    }
   };
 
   const handleQuickAddMarca = async () => {
-    const result = await addBrand(quickMarcaNome);
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
-      return;
-    }
+    try {
+      const result = await addBrand(quickMarcaNome);
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
+        return;
+      }
 
-    const normalized = quickMarcaNome.trim();
-    setProdutoMarca(normalized);
-    setQuickMarcaNome('');
-    setShowQuickMarcaInput(false);
-    Alert.alert('Marca cadastrada', 'Marca adicionada e selecionada no produto.');
+      const normalized = quickMarcaNome.trim();
+      setProdutoMarca(normalized);
+      setQuickMarcaNome('');
+      setShowQuickMarcaInput(false);
+      Alert.alert('Marca cadastrada', 'Marca adicionada e selecionada no produto.');
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao cadastrar marca.');
+    }
   };
 
   const handleAddProduto = async () => {
-    const result = await addProduct({
-      nome: nomeProduto,
-      categoria: produtoCategoria ?? '',
-      marca: produtoMarca ?? '',
-      precoVenda: Number(precoProduto) || 0,
-      estoqueAtual: Number(estoqueProduto) || 0,
-      estoqueMinimo: Number(estoqueMinimoProduto) || 0
-    });
+    try {
+      const result = await addProduct({
+        nome: nomeProduto,
+        categoria: produtoCategoria ?? '',
+        marca: produtoMarca ?? '',
+        precoVenda: Number(precoProduto) || 0,
+        estoqueAtual: Number(estoqueProduto) || 0,
+        estoqueMinimo: Number(estoqueMinimoProduto) || 0
+      });
 
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
-      return;
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
+        return;
+      }
+
+      setNomeProduto('');
+      setPrecoProduto('');
+      setEstoqueProduto('');
+      setEstoqueMinimoProduto('');
+      Alert.alert('Produto cadastrado', 'Produto adicionado com sucesso.');
+      resetCadastro();
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao cadastrar produto.');
     }
-
-    setNomeProduto('');
-    setPrecoProduto('');
-    setEstoqueProduto('');
-    setEstoqueMinimoProduto('');
-    Alert.alert('Produto cadastrado', 'Produto adicionado com sucesso.');
-    resetCadastro();
   };
 
   const handleAddCategoria = async () => {
-    const result = await addCategory(nomeCategoria);
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
-      return;
-    }
+    try {
+      const result = await addCategory(nomeCategoria);
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
+        return;
+      }
 
-    const normalized = nomeCategoria.trim();
-    setNomeCategoria('');
-    setProdutoCategoria((prev) => prev ?? normalized);
-    setKitCategoria((prev) => prev ?? normalized);
-    Alert.alert('Categoria cadastrada', 'Categoria adicionada com sucesso.');
-    resetCadastro();
+      const normalized = nomeCategoria.trim();
+      setNomeCategoria('');
+      setProdutoCategoria((prev) => prev ?? normalized);
+      setKitCategoria((prev) => prev ?? normalized);
+      Alert.alert('Categoria cadastrada', 'Categoria adicionada com sucesso.');
+      resetCadastro();
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao cadastrar categoria.');
+    }
   };
 
   const handleAddMarca = async () => {
-    const result = await addBrand(nomeMarca);
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
-      return;
-    }
+    try {
+      const result = await addBrand(nomeMarca);
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
+        return;
+      }
 
-    const normalized = nomeMarca.trim();
-    setNomeMarca('');
-    setProdutoMarca((prev) => prev ?? normalized);
-    setKitMarca((prev) => prev ?? normalized);
-    Alert.alert('Marca cadastrada', 'Marca adicionada com sucesso.');
-    resetCadastro();
+      const normalized = nomeMarca.trim();
+      setNomeMarca('');
+      setProdutoMarca((prev) => prev ?? normalized);
+      setKitMarca((prev) => prev ?? normalized);
+      Alert.alert('Marca cadastrada', 'Marca adicionada com sucesso.');
+      resetCadastro();
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao cadastrar marca.');
+    }
   };
 
   const addItemToKit = () => {
@@ -215,27 +239,31 @@ export const EstoqueScreen = () => {
   };
 
   const handleAddKit = async () => {
-    const result = await addKit({
-      nome: nomeKit,
-      categoria: kitCategoria ?? '',
-      marca: kitMarca ?? '',
-      precoVenda: Number(precoKit) || 0,
-      estoqueMinimo: Number(estoqueMinimoKit) || 0,
-      itens: kitItens
-    });
+    try {
+      const result = await addKit({
+        nome: nomeKit,
+        categoria: kitCategoria ?? '',
+        marca: kitMarca ?? '',
+        precoVenda: Number(precoKit) || 0,
+        estoqueMinimo: Number(estoqueMinimoKit) || 0,
+        itens: kitItens
+      });
 
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
-      return;
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
+        return;
+      }
+
+      setNomeKit('');
+      setPrecoKit('');
+      setKitPriceManual(false);
+      setEstoqueMinimoKit('');
+      setKitItens([]);
+      Alert.alert('Kit cadastrado', 'Kit adicionado com sucesso.');
+      resetCadastro();
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao cadastrar kit.');
     }
-
-    setNomeKit('');
-    setPrecoKit('');
-    setKitPriceManual(false);
-    setEstoqueMinimoKit('');
-    setKitItens([]);
-    Alert.alert('Kit cadastrado', 'Kit adicionado com sucesso.');
-    resetCadastro();
   };
 
   const renderCadastro = () => {
@@ -661,12 +689,16 @@ export const EstoqueScreen = () => {
                     <Pressable
                       style={styles.saveEditButton}
                       onPress={async () => {
-                        const result = await updateCategory(item, editCategoryName);
-                        if (!result.ok) {
-                          Alert.alert('Erro', result.error ?? 'Erro desconhecido.');
-                          return;
+                        try {
+                          const result = await updateCategory(item, editCategoryName);
+                          if (!result.ok) {
+                            Alert.alert('Erro', result.error ?? 'Erro desconhecido.');
+                            return;
+                          }
+                          setEditingCategory(null);
+                        } catch (error: any) {
+                          Alert.alert('Erro', error?.message ?? 'Erro inesperado ao atualizar categoria.');
                         }
-                        setEditingCategory(null);
                       }}
                     >
                       <Text style={styles.saveEditText}>Salvar</Text>
@@ -721,12 +753,16 @@ export const EstoqueScreen = () => {
                     <Pressable
                       style={styles.saveEditButton}
                       onPress={async () => {
-                        const result = await updateBrand(item, editBrandName);
-                        if (!result.ok) {
-                          Alert.alert('Erro', result.error ?? 'Erro desconhecido.');
-                          return;
+                        try {
+                          const result = await updateBrand(item, editBrandName);
+                          if (!result.ok) {
+                            Alert.alert('Erro', result.error ?? 'Erro desconhecido.');
+                            return;
+                          }
+                          setEditingBrand(null);
+                        } catch (error: any) {
+                          Alert.alert('Erro', error?.message ?? 'Erro inesperado ao atualizar marca.');
                         }
-                        setEditingBrand(null);
                       }}
                     >
                       <Text style={styles.saveEditText}>Salvar</Text>

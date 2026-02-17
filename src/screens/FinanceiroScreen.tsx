@@ -70,26 +70,30 @@ export const FinanceiroScreen = () => {
   };
 
   const handleSavePayable = async () => {
-    const result = await addManualPayable({
-      tipo,
-      referencia,
-      descricao,
-      valor: Number(valor) || 0,
-      vencimento: toDateInput(vencimentoDate)
-    });
+    try {
+      const result = await addManualPayable({
+        tipo,
+        referencia,
+        descricao,
+        valor: Number(valor) || 0,
+        vencimento: toDateInput(vencimentoDate)
+      });
 
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
-      return;
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel cadastrar', result.error ?? 'Erro desconhecido.');
+        return;
+      }
+
+      setReferencia('');
+      setDescricao('');
+      setValor('');
+      setVencimentoDate(new Date());
+      setTipo('boleto');
+      setShowForm(false);
+      Alert.alert('Conta cadastrada', 'Conta a pagar adicionada com sucesso.');
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao cadastrar conta.');
     }
-
-    setReferencia('');
-    setDescricao('');
-    setValor('');
-    setVencimentoDate(new Date());
-    setTipo('boleto');
-    setShowForm(false);
-    Alert.alert('Conta cadastrada', 'Conta a pagar adicionada com sucesso.');
   };
 
   const startEdit = (id: string) => {
@@ -116,22 +120,26 @@ export const FinanceiroScreen = () => {
       return;
     }
 
-    const result = await updatePayable({
-      id: editingId,
-      fornecedor: editFornecedor,
-      descricao: editDescricao,
-      valor: Number(editValor) || 0,
-      vencimento: toDateInput(editVencimentoDate)
-    });
+    try {
+      const result = await updatePayable({
+        id: editingId,
+        fornecedor: editFornecedor,
+        descricao: editDescricao,
+        valor: Number(editValor) || 0,
+        vencimento: toDateInput(editVencimentoDate)
+      });
 
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel atualizar', result.error ?? 'Erro desconhecido.');
-      return;
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel atualizar', result.error ?? 'Erro desconhecido.');
+        return;
+      }
+
+      setEditingId(null);
+      setShowEditDatePicker(false);
+      Alert.alert('Conta atualizada', 'Dados da conta a pagar atualizados.');
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao atualizar conta.');
     }
-
-    setEditingId(null);
-    setShowEditDatePicker(false);
-    Alert.alert('Conta atualizada', 'Dados da conta a pagar atualizados.');
   };
 
   return (

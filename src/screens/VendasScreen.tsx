@@ -101,22 +101,26 @@ export const VendasScreen = () => {
   };
 
   const handleQuickAddCustomer = async () => {
-    const result = await addCustomer({
-      nome: quickCustomerName,
-      telefone: quickCustomerPhone,
-      status: 'novo'
-    });
+    try {
+      const result = await addCustomer({
+        nome: quickCustomerName,
+        telefone: quickCustomerPhone,
+        status: 'novo'
+      });
 
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel cadastrar cliente', result.error ?? 'Erro desconhecido.');
-      return;
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel cadastrar cliente', result.error ?? 'Erro desconhecido.');
+        return;
+      }
+
+      setSelectedCustomerId(result.id ?? null);
+      setQuickCustomerName('');
+      setQuickCustomerPhone('');
+      setShowQuickCustomerInput(false);
+      Alert.alert('Cliente cadastrado', 'Cliente criado e pronto para selecao.');
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao cadastrar cliente.');
     }
-
-    setSelectedCustomerId(result.id ?? null);
-    setQuickCustomerName('');
-    setQuickCustomerPhone('');
-    setShowQuickCustomerInput(false);
-    Alert.alert('Cliente cadastrado', 'Cliente criado e pronto para selecao.');
   };
 
   const handleRegister = async () => {
@@ -130,29 +134,33 @@ export const VendasScreen = () => {
       return;
     }
 
-    const result = await registerSale({
-      customerId: customer.id,
-      itens: saleItems,
-      formaPagamento,
-      prazoConfig:
-        formaPagamento === 'prazo'
-          ? {
-              parcelas: parcelasPrazo,
-              entrada: Number(entradaText) || 0,
-              primeiraData: parcelasPrazo === 1 ? toDateInput(singleDueDate) : undefined,
-              diaVencimento: parcelasPrazo > 1 ? Number(dueDayText) || 0 : undefined
-            }
-          : undefined
-    });
+    try {
+      const result = await registerSale({
+        customerId: customer.id,
+        itens: saleItems,
+        formaPagamento,
+        prazoConfig:
+          formaPagamento === 'prazo'
+            ? {
+                parcelas: parcelasPrazo,
+                entrada: Number(entradaText) || 0,
+                primeiraData: parcelasPrazo === 1 ? toDateInput(singleDueDate) : undefined,
+                diaVencimento: parcelasPrazo > 1 ? Number(dueDayText) || 0 : undefined
+              }
+            : undefined
+      });
 
-    if (!result.ok) {
-      Alert.alert('Nao foi possivel registrar venda', result.error ?? 'Erro desconhecido.');
-      return;
+      if (!result.ok) {
+        Alert.alert('Nao foi possivel registrar venda', result.error ?? 'Erro desconhecido.');
+        return;
+      }
+
+      Alert.alert('Venda registrada', 'Estoque atualizado com sucesso.');
+      resetForm();
+      setShowForm(false);
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao registrar venda.');
     }
-
-    Alert.alert('Venda registrada', 'Estoque atualizado com sucesso.');
-    resetForm();
-    setShowForm(false);
   };
 
   const addItemToSale = () => {
