@@ -4,6 +4,8 @@ import {
   Customer,
   Payable,
   Product,
+  PurchaseOrder,
+  PurchaseOrderItem,
   Receivable,
   RegisterSalePayload,
   Sale,
@@ -17,6 +19,7 @@ import { StockMoveRepository } from '../services/StockMoveRepository';
 import { FinancialRepository } from '../services/FinancialRepository';
 import { CategoryRepository } from '../services/CategoryRepository';
 import { BrandRepository } from '../services/BrandRepository';
+import { PurchaseOrderRepository } from '../services/PurchaseOrderRepository';
 
 type AppStoreValue = {
   products: Product[];
@@ -77,6 +80,14 @@ type AppStoreValue = {
   removeCategory: (name: string) => Promise<void>;
   updateBrand: (oldName: string, newName: string) => Promise<{ ok: boolean; error?: string }>;
   removeBrand: (name: string) => Promise<void>;
+  pendingOrderItems: PurchaseOrderItem[];
+  purchaseOrders: PurchaseOrder[];
+  addPurchaseOrderItem: (nome: string, codigo: string, quantidade: number) => Promise<{ ok: boolean; error?: string }>;
+  updatePurchaseOrderItemQty: (id: string, quantidade: number) => Promise<{ ok: boolean; error?: string }>;
+  updatePurchaseOrderItem: (id: string, nome: string, codigo: string) => Promise<{ ok: boolean; error?: string }>;
+  removePurchaseOrderItem: (id: string) => Promise<void>;
+  finalizePurchaseOrder: (selectedIds: string[]) => Promise<{ ok: boolean; error?: string }>;
+  deletePurchaseOrder: (id: string) => Promise<void>;
 };
 
 const AppStore = createContext<AppStoreValue | undefined>(undefined);
@@ -144,6 +155,8 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
   const [stockMoves, setStockMoves] = useState<StockMove[]>([]);
   const [receivables, setReceivables] = useState<Receivable[]>([]);
   const [payables, setPayables] = useState<Payable[]>([]);
+  const [pendingOrderItems, setPendingOrderItems] = useState<PurchaseOrderItem[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [isReady, setIsReady] = useState(false);
 
   const loadData = async () => {
@@ -158,7 +171,9 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
             loadedSales,
             loadedStockMoves,
             loadedReceivables,
-            loadedPayables
+            loadedPayables,
+            loadedPendingItems,
+            loadedPurchaseOrders
         ] = await Promise.all([
             ProductRepository.getAll(),
             CategoryRepository.getAll(),
@@ -167,7 +182,9 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
             SaleRepository.getAll(),
             StockMoveRepository.getAll(),
             FinancialRepository.getAllReceivables(),
-            FinancialRepository.getAllPayables()
+            FinancialRepository.getAllPayables(),
+            PurchaseOrderRepository.getPendingItems(),
+            PurchaseOrderRepository.getAllOrders()
         ]);
 
         setProducts(loadedProducts);
@@ -178,6 +195,8 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
         setStockMoves(loadedStockMoves);
         setReceivables(loadedReceivables);
         setPayables(loadedPayables);
+        setPendingOrderItems(loadedPendingItems);
+        setPurchaseOrders(loadedPurchaseOrders);
         setIsReady(true);
     } catch (error: any) {
         console.error('Failed to load data from DB:', error);
@@ -843,6 +862,104 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
     }
   };
 
+  const addPurchaseOrderItem = async (nome: string, codigo: string, quantidade: number) => {
+    if (!nome.trim()) {
+      return { ok: false, error: 'Informe o nome do item.' };
+    }
+    if (!codigo.trim()) {
+      return { ok: false, error: 'Informe o codigo do item.' };
+    }
+    if (quantidade <= 0) {
+      return { ok: false, error: 'Quantidade deve ser maior que zero.' };
+    }
+    const item: PurchaseOrderItem = {
+      id: generateId(),
+      nome: nome.trim(),
+      codigo: codigo.trim(),
+      quantidade
+    };
+    try {
+      await PurchaseOrderRepository.addPendingItem(item);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao adicionar item.' };
+    }
+    setPendingOrderItems((prev) => [...prev, item]);
+    return { ok: true };
+  };
+
+  const updatePurchaseOrderItemQty = async (id: string, quantidade: number) => {
+    if (quantidade <= 0) {
+      return { ok: false, error: 'Quantidade deve ser maior que zero.' };
+    }
+    try {
+      await PurchaseOrderRepository.updatePendingItemQty(id, quantidade);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao atualizar quantidade.' };
+    }
+    setPendingOrderItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, quantidade } : item))
+    );
+    return { ok: true };
+  };
+
+  const updatePurchaseOrderItem = async (id: string, nome: string, codigo: string) => {
+    if (!nome.trim()) {
+      return { ok: false, error: 'Informe o nome do item.' };
+    }
+    if (!codigo.trim()) {
+      return { ok: false, error: 'Informe o codigo do item.' };
+    }
+    try {
+      await PurchaseOrderRepository.updatePendingItem(id, nome.trim(), codigo.trim());
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao atualizar item.' };
+    }
+    setPendingOrderItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, nome: nome.trim(), codigo: codigo.trim() } : item
+      )
+    );
+    return { ok: true };
+  };
+
+  const deletePurchaseOrder = async (id: string) => {
+    try {
+      await PurchaseOrderRepository.deleteOrder(id);
+      setPurchaseOrders((prev) => prev.filter((order) => order.id !== id));
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao excluir pedido.');
+    }
+  };
+
+  const removePurchaseOrderItem = async (id: string) => {
+    try {
+      await PurchaseOrderRepository.deletePendingItem(id);
+      setPendingOrderItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao remover item.');
+    }
+  };
+
+  const finalizePurchaseOrder = async (selectedIds: string[]) => {
+    if (!selectedIds.length) {
+      return { ok: false, error: 'Selecione ao menos um item para finalizar o pedido.' };
+    }
+    const selectedItems = pendingOrderItems.filter((item) => selectedIds.includes(item.id));
+    const order: PurchaseOrder = {
+      id: generateId(),
+      data: new Date().toISOString(),
+      itens: selectedItems.map((item) => ({ ...item, id: generateId() }))
+    };
+    try {
+      await PurchaseOrderRepository.finalizeOrder(order, selectedIds);
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'Erro ao finalizar pedido.' };
+    }
+    setPendingOrderItems((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
+    setPurchaseOrders((prev) => [order, ...prev]);
+    return { ok: true };
+  };
+
   const value = useMemo(
     () => ({
       products,
@@ -872,9 +989,17 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       updateCategory,
       removeCategory,
       updateBrand,
-      removeBrand
+      removeBrand,
+      pendingOrderItems,
+      purchaseOrders,
+      addPurchaseOrderItem,
+      updatePurchaseOrderItemQty,
+      updatePurchaseOrderItem,
+      removePurchaseOrderItem,
+      finalizePurchaseOrder,
+      deletePurchaseOrder
     }),
-    [products, categories, brands, customers, sales, stockMoves, receivables, payables]
+    [products, categories, brands, customers, sales, stockMoves, receivables, payables, pendingOrderItems, purchaseOrders]
   );
 
   if (!isReady) return null;

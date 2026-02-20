@@ -9,6 +9,7 @@ import { DashboardScreen } from './src/screens/DashboardScreen';
 import { EstoqueScreen } from './src/screens/EstoqueScreen';
 import { FinanceiroScreen } from './src/screens/FinanceiroScreen';
 import { VendasScreen } from './src/screens/VendasScreen';
+import { PedidosScreen } from './src/screens/PedidosScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -17,6 +18,7 @@ const TAB_ICONS: Record<string, string> = {
   Estoque: 'package-variant-closed',
   CRM: 'account-group',
   Vendas: 'cart',
+  Pedidos: 'clipboard-list',
   Financeiro: 'cash-multiple',
 };
 
@@ -43,6 +45,7 @@ export default function App() {
           <Tab.Screen name="Estoque" component={EstoqueScreen} />
           <Tab.Screen name="CRM" component={CrmScreen} />
           <Tab.Screen name="Vendas" component={VendasScreen} />
+          <Tab.Screen name="Pedidos" component={PedidosScreen} />
           <Tab.Screen name="Financeiro" component={FinanceiroScreen} />
         </Tab.Navigator>
       </NavigationContainer>

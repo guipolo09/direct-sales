@@ -2,13 +2,19 @@ import * as SQLite from 'expo-sqlite';
 
 const dbName = 'salesStore_v2.db';
 
-export const getDB = async () => {
-  return await SQLite.openDatabaseAsync(dbName);
+let _db: SQLite.SQLiteDatabase | null = null;
+
+export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
+  if (!_db) {
+    _db = await SQLite.openDatabaseAsync(dbName);
+  }
+  return _db;
 };
 
 export const initDB = async () => {
     const db = await getDB();
 
+    await db.execAsync(`PRAGMA journal_mode = WAL;`);
     await db.execAsync(`PRAGMA foreign_keys = ON;`);
 
     await db.execAsync(`
@@ -116,6 +122,33 @@ export const initDB = async () => {
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS brands (
         name TEXT PRIMARY KEY
+      );
+    `);
+
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS purchase_order_items (
+        id TEXT PRIMARY KEY,
+        nome TEXT NOT NULL,
+        codigo TEXT NOT NULL,
+        quantidade INTEGER NOT NULL DEFAULT 1
+      );
+    `);
+
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS purchase_orders (
+        id TEXT PRIMARY KEY,
+        data TEXT NOT NULL
+      );
+    `);
+
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS purchase_order_line_items (
+        id TEXT PRIMARY KEY,
+        orderId TEXT NOT NULL,
+        nome TEXT NOT NULL,
+        codigo TEXT NOT NULL,
+        quantidade INTEGER NOT NULL,
+        FOREIGN KEY (orderId) REFERENCES purchase_orders(id)
       );
     `);
 

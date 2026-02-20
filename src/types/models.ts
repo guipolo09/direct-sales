@@ -69,6 +69,19 @@ export type Payable = {
   paidAt?: string;
 };
 
+export type PurchaseOrderItem = {
+  id: string;
+  nome: string;
+  codigo: string;
+  quantidade: number;
+};
+
+export type PurchaseOrder = {
+  id: string;
+  data: string;
+  itens: PurchaseOrderItem[];
+};
+
 export type RegisterSalePayload = {
   customerId: string;
   itens: Array<{
