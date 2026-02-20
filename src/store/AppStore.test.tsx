@@ -8,6 +8,7 @@ import { FinancialRepository } from '../services/FinancialRepository';
 import { CategoryRepository } from '../services/CategoryRepository';
 import { BrandRepository } from '../services/BrandRepository';
 import { StockMoveRepository } from '../services/StockMoveRepository';
+import { PurchaseOrderRepository } from '../services/PurchaseOrderRepository';
 
 // Mock dependencies
 jest.mock('../services/db', () => ({
@@ -28,6 +29,7 @@ jest.mock('../services/FinancialRepository');
 jest.mock('../services/CategoryRepository');
 jest.mock('../services/BrandRepository');
 jest.mock('../services/StockMoveRepository');
+jest.mock('../services/PurchaseOrderRepository');
 
 describe('AppStore Integration Tests', () => {
   beforeEach(() => {
@@ -42,6 +44,8 @@ describe('AppStore Integration Tests', () => {
     (CategoryRepository.getAll as jest.Mock).mockResolvedValue([]);
     (BrandRepository.getAll as jest.Mock).mockResolvedValue([]);
     (StockMoveRepository.getAll as jest.Mock).mockResolvedValue([]);
+    (PurchaseOrderRepository.getPendingItems as jest.Mock).mockResolvedValue([]);
+    (PurchaseOrderRepository.getAllOrders as jest.Mock).mockResolvedValue([]);
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -60,7 +64,7 @@ describe('AppStore Integration Tests', () => {
   describe('CRUD Operations', () => {
       it('should add a category', async () => {
           const { result } = renderHook(() => useAppStore(), { wrapper });
-          await waitFor(() => expect(result.current).toBeDefined());
+          await waitFor(() => expect(result.current).not.toBeNull());
 
           await act(async () => {
               const res = await result.current.addCategory('Electronics');
@@ -73,7 +77,7 @@ describe('AppStore Integration Tests', () => {
 
       it('should add a brand', async () => {
           const { result } = renderHook(() => useAppStore(), { wrapper });
-          await waitFor(() => expect(result.current).toBeDefined());
+          await waitFor(() => expect(result.current).not.toBeNull());
 
           await act(async () => {
               const res = await result.current.addBrand('Sony');
@@ -86,7 +90,7 @@ describe('AppStore Integration Tests', () => {
 
       it('should add a customer', async () => {
           const { result } = renderHook(() => useAppStore(), { wrapper });
-          await waitFor(() => expect(result.current).toBeDefined());
+          await waitFor(() => expect(result.current).not.toBeNull());
 
           const newCustomer = {
               nome: 'John Doe',
@@ -106,7 +110,7 @@ describe('AppStore Integration Tests', () => {
 
       it('should add a product', async () => {
           const { result } = renderHook(() => useAppStore(), { wrapper });
-          await waitFor(() => expect(result.current).toBeDefined());
+          await waitFor(() => expect(result.current).not.toBeNull());
           
           // Setup brands/categories first for validation
           await act(async () => {
@@ -134,7 +138,7 @@ describe('AppStore Integration Tests', () => {
       
       it('should add a manual payable account', async () => {
            const { result } = renderHook(() => useAppStore(), { wrapper });
-           await waitFor(() => expect(result.current).toBeDefined());
+           await waitFor(() => expect(result.current).not.toBeNull());
 
            const payable = {
                tipo: 'conta_fixa' as const,
@@ -157,7 +161,7 @@ describe('AppStore Integration Tests', () => {
   describe('Sales Flow', () => {
       it('should register a cash sale', async () => {
           const { result } = renderHook(() => useAppStore(), { wrapper });
-          await waitFor(() => expect(result.current).toBeDefined());
+          await waitFor(() => expect(result.current).not.toBeNull());
 
           // Pre-populate product
           const product = {
@@ -202,7 +206,7 @@ describe('AppStore Integration Tests', () => {
 
       it('should register an installment sale', async () => {
           const { result } = renderHook(() => useAppStore(), { wrapper });
-          await waitFor(() => expect(result.current).toBeDefined());
+          await waitFor(() => expect(result.current).not.toBeNull());
 
            const product = {
               id: 'p1',
