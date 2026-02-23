@@ -54,6 +54,7 @@ type AppStoreValue = {
     estoqueMinimo: number;
     precoVenda: number;
     tempoMedioConsumo?: number | null;
+    codigoBarras?: string | null;
   }) => Promise<{ ok: boolean; error?: string }>;
   addKit: (payload: {
     nome: string;
@@ -339,6 +340,7 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
     estoqueMinimo: number;
     precoVenda: number;
     tempoMedioConsumo?: number | null;
+    codigoBarras?: string | null;
   }) => {
     if (!payload.nome.trim()) {
       return { ok: false, error: 'Informe o nome do produto.' };
@@ -370,6 +372,7 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       estoqueMinimo: payload.estoqueMinimo,
       precoVenda: payload.precoVenda,
       tempoMedioConsumo: payload.tempoMedioConsumo ?? null,
+      codigoBarras: payload.codigoBarras?.trim() || null,
     };
 
     try {

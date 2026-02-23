@@ -10,6 +10,7 @@ export type Product = {
   estoqueMinimo: number;
   precoVenda: number;
   tempoMedioConsumo?: number | null;
+  codigoBarras?: string | null;
   kitItens?: Array<{
     productId: string;
     quantidade: number;

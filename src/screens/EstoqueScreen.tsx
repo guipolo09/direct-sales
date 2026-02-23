@@ -1,9 +1,11 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Product } from '../types/models';
 import { useAppStore } from '../store/AppStore';
 import { formatCurrency } from '../utils/format';
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 
 type CadastroTipo = 'produto' | 'categoria' | 'marca' | 'kit' | null;
 type SectionTipo = 'produtos' | 'categorias' | 'marcas';
@@ -44,6 +46,12 @@ export const EstoqueScreen = () => {
   const [estoqueProduto, setEstoqueProduto] = useState('');
   const [estoqueMinimoProduto, setEstoqueMinimoProduto] = useState('');
   const [tempoMedioConsumo, setTempoMedioConsumo] = useState('');
+  const [codigoProduto, setCodigoProduto] = useState('');
+
+  const [showFormScanner, setShowFormScanner] = useState(false);
+  const [showMainScanner, setShowMainScanner] = useState(false);
+  const [barcodeFoundProduct, setBarcodeFoundProduct] = useState<Product | null>(null);
+  const [barcodeEntryQty, setBarcodeEntryQty] = useState('');
 
   const [nomeMarca, setNomeMarca] = useState('');
   const [nomeCategoria, setNomeCategoria] = useState('');
@@ -96,12 +104,48 @@ export const EstoqueScreen = () => {
     setShowQuickCategoriaInput(false);
     setShowQuickMarcaInput(false);
     setKitPriceManual(false);
+    setCodigoProduto('');
+    setShowFormScanner(false);
+    setBarcodeFoundProduct(null);
+    setBarcodeEntryQty('');
   };
 
   const handleQuickEntry = async (productId: string) => {
     try {
       await addStockEntry(productId, 1, 'Fornecedor padrao', 35);
       Alert.alert('Estoque atualizado', 'Entrada de 1 unidade registrada e conta a pagar gerada.');
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro inesperado ao registrar entrada.');
+    }
+  };
+
+  const handleMainBarcodeScan = (code: string) => {
+    const found = products.find((p) => p.codigoBarras === code);
+    if (found) {
+      setBarcodeFoundProduct(found);
+      setBarcodeEntryQty('');
+      setCadastroTipo(null);
+      setShowCadastroMenu(false);
+    } else {
+      setCodigoProduto(code);
+      setCadastroTipo('produto');
+      setShowCadastroMenu(false);
+      setBarcodeFoundProduct(null);
+    }
+  };
+
+  const handleBarcodeStockEntry = async () => {
+    if (!barcodeFoundProduct) return;
+    const qty = Number(barcodeEntryQty);
+    if (!qty || qty <= 0) {
+      Alert.alert('Quantidade invalida', 'Informe uma quantidade maior que zero.');
+      return;
+    }
+    try {
+      await addStockEntry(barcodeFoundProduct.id, qty, 'Fornecedor padrao', 0);
+      Alert.alert('Estoque atualizado', `Entrada de ${qty} unidade(s) registrada para "${barcodeFoundProduct.nome}".`);
+      setBarcodeFoundProduct(null);
+      setBarcodeEntryQty('');
     } catch (error: any) {
       Alert.alert('Erro', error?.message ?? 'Erro inesperado ao registrar entrada.');
     }
@@ -154,6 +198,7 @@ export const EstoqueScreen = () => {
         estoqueAtual: Number(estoqueProduto) || 0,
         estoqueMinimo: Number(estoqueMinimoProduto) || 0,
         tempoMedioConsumo: tmc > 0 ? tmc : null,
+        codigoBarras: codigoProduto.trim() || null,
       });
 
       if (!result.ok) {
@@ -371,6 +416,20 @@ export const EstoqueScreen = () => {
             </View>
           ) : null}
 
+          <Text style={styles.label}>Codigo de barras (opcional)</Text>
+          <View style={styles.barcodeRow}>
+            <TextInput
+              placeholderTextColor="#9ca3af"
+              value={codigoProduto}
+              onChangeText={setCodigoProduto}
+              placeholder="Ex: 7891234567890"
+              style={[styles.input, styles.barcodeInput]}
+            />
+            <Pressable style={styles.barcodeScanButton} onPress={() => setShowFormScanner(true)}>
+              <MaterialCommunityIcons name="barcode-scan" size={22} color="#fff" />
+            </Pressable>
+          </View>
+
           <TextInput placeholderTextColor="#9ca3af"
             value={precoProduto}
             onChangeText={setPrecoProduto}
@@ -585,6 +644,9 @@ export const EstoqueScreen = () => {
             {product.tempoMedioConsumo ? (
               <Text style={styles.info}>Tempo medio de consumo: {product.tempoMedioConsumo} dias</Text>
             ) : null}
+            {product.codigoBarras ? (
+              <Text style={styles.info}>Codigo de barras: {product.codigoBarras}</Text>
+            ) : null}
             {product.tipo === 'kit' ? (
               <View style={styles.kitCompositionBox}>
                 <Text style={styles.kitCompositionTitle}>Composicao do kit:</Text>
@@ -626,9 +688,14 @@ export const EstoqueScreen = () => {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <Text style={styles.title}>Controle de Estoque</Text>
-          <Pressable style={styles.cadastrarButton} onPress={() => setShowCadastroMenu((prev) => !prev)}>
-            <Text style={styles.cadastrarText}>+ Cadastrar</Text>
-          </Pressable>
+          <View style={styles.topActions}>
+            <Pressable style={styles.barcodeTopButton} onPress={() => setShowMainScanner(true)}>
+              <MaterialCommunityIcons name="barcode-scan" size={20} color="#fff" />
+            </Pressable>
+            <Pressable style={styles.cadastrarButton} onPress={() => setShowCadastroMenu((prev) => !prev)}>
+              <Text style={styles.cadastrarText}>+ Cadastrar</Text>
+            </Pressable>
+          </View>
         </View>
 
         {showCadastroMenu ? (
@@ -649,6 +716,32 @@ export const EstoqueScreen = () => {
         ) : null}
 
         {renderCadastro()}
+
+        {barcodeFoundProduct ? (
+          <View style={styles.card}>
+            <Text style={styles.formTitle}>Produto encontrado</Text>
+            <Text style={styles.info}>Nome: {barcodeFoundProduct.nome}</Text>
+            <Text style={styles.info}>Estoque atual: {getProductStock(barcodeFoundProduct.id)}</Text>
+            <Text style={styles.info}>Codigo: {barcodeFoundProduct.codigoBarras}</Text>
+            <Text style={[styles.label, { marginTop: 8 }]}>Quantidade a adicionar</Text>
+            <TextInput
+              placeholderTextColor="#9ca3af"
+              value={barcodeEntryQty}
+              onChangeText={setBarcodeEntryQty}
+              placeholder="Informe a quantidade"
+              keyboardType="numeric"
+              style={styles.input}
+            />
+            <View style={styles.actionsRow}>
+              <Pressable style={styles.secondaryButton} onPress={() => { setBarcodeFoundProduct(null); setBarcodeEntryQty(''); }}>
+                <Text style={styles.secondaryButtonText}>Cancelar</Text>
+              </Pressable>
+              <Pressable style={styles.primaryButton} onPress={handleBarcodeStockEntry}>
+                <Text style={styles.primaryButtonText}>Confirmar entrada</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
@@ -817,6 +910,16 @@ export const EstoqueScreen = () => {
           </View>
         ) : null}
       </ScrollView>
+      <BarcodeScannerModal
+        visible={showFormScanner}
+        onScan={(code) => setCodigoProduto(code)}
+        onClose={() => setShowFormScanner(false)}
+      />
+      <BarcodeScannerModal
+        visible={showMainScanner}
+        onScan={handleMainBarcodeScan}
+        onClose={() => setShowMainScanner(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -1263,5 +1366,36 @@ const styles = StyleSheet.create({
   cancelEditText: {
     color: '#374151',
     fontWeight: '700'
-  }
+  },
+  topActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  barcodeTopButton: {
+    backgroundColor: '#1d4ed8',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  barcodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  barcodeInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  barcodeScanButton: {
+    backgroundColor: '#1d4ed8',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

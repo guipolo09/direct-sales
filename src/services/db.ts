@@ -27,7 +27,8 @@ export const initDB = async () => {
         estoqueAtual INTEGER NOT NULL DEFAULT 0,
         estoqueMinimo INTEGER NOT NULL DEFAULT 0,
         precoVenda REAL NOT NULL,
-        tempoMedioConsumo INTEGER DEFAULT NULL
+        tempoMedioConsumo INTEGER DEFAULT NULL,
+        codigoBarras TEXT DEFAULT NULL
       );
     `);
 
@@ -37,6 +38,20 @@ export const initDB = async () => {
     } catch {
       // Column already exists – migration already applied
     }
+
+    // Migration: add codigoBarras to existing databases
+    try {
+      await db.execAsync(`ALTER TABLE products ADD COLUMN codigoBarras TEXT DEFAULT NULL;`);
+    } catch {
+      // Column already exists – migration already applied
+    }
+
+    // Unique index for codigoBarras (partial: ignores NULL, allows multiple products without code)
+    await db.execAsync(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_products_codigoBarras
+      ON products(codigoBarras)
+      WHERE codigoBarras IS NOT NULL;
+    `);
 
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS kit_items (
