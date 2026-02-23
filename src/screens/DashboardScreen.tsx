@@ -1,14 +1,19 @@
 ﻿import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { DonutChart } from '../components/DonutChart';
 import { KpiCard } from '../components/KpiCard';
 import { useAppStore } from '../store/AppStore';
 import { addMonths, formatCurrency, formatMonthYear, isSameMonthYear } from '../utils/format';
+import { AlertasScreen } from './AlertasScreen';
+import { ConfiguracoesScreen } from './ConfiguracoesScreen';
 
 export const DashboardScreen = () => {
-  const { products, sales, receivables, payables, customers, stockMoves, getProductStock } = useAppStore();
+  const { products, sales, receivables, payables, customers, stockMoves, getProductStock, notifications, themeColor } = useAppStore();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [showAlertas, setShowAlertas] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
 
   const monthSales = useMemo(
     () => sales.filter((sale) => isSameMonthYear(sale.data, selectedMonth)),
@@ -72,7 +77,23 @@ export const DashboardScreen = () => {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <Text style={styles.title}>Resumo da Loja</Text>
+          <View style={styles.headerActions}>
+            <Pressable style={styles.headerIconBtn} onPress={() => setShowAlertas(true)}>
+              <MaterialCommunityIcons name="bell-outline" size={22} color={themeColor} />
+              {notifications.length > 0 ? (
+                <View style={[styles.badge, { backgroundColor: notifications.some(n => n.prioridade === 'critico') ? '#dc2626' : '#d97706' }]}>
+                  <Text style={styles.badgeText}>{notifications.length > 99 ? '99+' : notifications.length}</Text>
+                </View>
+              ) : null}
+            </Pressable>
+            <Pressable style={styles.headerIconBtn} onPress={() => setShowConfig(true)}>
+              <MaterialCommunityIcons name="cog-outline" size={22} color="#6b7280" />
+            </Pressable>
+          </View>
         </View>
+
+        <AlertasScreen visible={showAlertas} onClose={() => setShowAlertas(false)} />
+        <ConfiguracoesScreen visible={showConfig} onClose={() => setShowConfig(false)} />
 
         <View style={styles.monthCard}>
           <Text style={styles.monthArrow} onPress={() => setSelectedMonth((prev) => addMonths(prev, -1))}>
@@ -95,26 +116,16 @@ export const DashboardScreen = () => {
           <KpiCard title="Clientes novos" value={String(newCustomersCount)} tone="default" />
         </View>
 
-        <View style={styles.chartsRow}>
-          <View style={styles.chartHalf}>
-            <DonutChart
-              title="Vendas x Recebido"
-              slices={[
-                { label: 'Vendas', value: salesTotal, color: '#1d4ed8' },
-                { label: 'Recebido', value: receivedTotal, color: '#16a34a' }
-              ]}
-            />
-          </View>
-          <View style={styles.chartHalf}>
-            <DonutChart
-              title="Recebimentos"
-              slices={[
-                { label: 'Recebido', value: receivedTotal, color: '#16a34a' },
-                { label: 'A receber', value: receivableTotal, color: '#f59e0b' }
-              ]}
-            />
-          </View>
-        </View>
+        <DonutChart
+          title="Vendas do Periodo"
+          horizontal
+          totalLabel="Total de Vendas"
+          totalValue={formatCurrency(salesTotal)}
+          slices={[
+            { label: 'Recebido', value: receivedTotal, color: '#16a34a' },
+            { label: 'A receber', value: receivableTotal, color: '#f59e0b' }
+          ]}
+        />
 
         <View style={styles.barCard}>
           <Text style={styles.barTitle}>Vendas por dia (quantidade)</Text>
@@ -176,12 +187,43 @@ const styles = StyleSheet.create({
   },
   topRow: {
     marginTop: 8,
-    marginBottom: 12
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
     color: '#111827'
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
   },
   monthCard: {
     backgroundColor: '#fff',
@@ -210,14 +252,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 8
-  },
-  chartsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 4
-  },
-  chartHalf: {
-    flex: 1
   },
   bottomRow: {
     flexDirection: 'row',

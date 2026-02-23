@@ -1,7 +1,10 @@
 ﻿import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
+  AppNotification,
+  AppSettings,
   Customer,
+  DEFAULT_SETTINGS,
   Payable,
   Product,
   PurchaseOrder,
@@ -20,6 +23,9 @@ import { FinancialRepository } from '../services/FinancialRepository';
 import { CategoryRepository } from '../services/CategoryRepository';
 import { BrandRepository } from '../services/BrandRepository';
 import { PurchaseOrderRepository } from '../services/PurchaseOrderRepository';
+import { SettingsRepository } from '../services/SettingsRepository';
+import { computeNotifications, themeColor as getThemeColor } from '../services/NotificationService';
+import { NotifState, NotifStateRepository } from '../services/NotifStateRepository';
 
 type AppStoreValue = {
   products: Product[];
@@ -31,6 +37,15 @@ type AppStoreValue = {
   receivables: Receivable[];
   payables: Payable[];
   getProductStock: (productId: string) => number;
+  settings: AppSettings;
+  themeColor: string;
+  notifications: AppNotification[];
+  readNotificationIds: Set<string>;
+  updateSettings: (s: AppSettings) => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
+  dismissNotification: (id: string) => Promise<void>;
+  dismissAllNotifications: () => Promise<void>;
   addProduct: (payload: {
     nome: string;
     categoria: string;
@@ -38,6 +53,7 @@ type AppStoreValue = {
     estoqueAtual: number;
     estoqueMinimo: number;
     precoVenda: number;
+    tempoMedioConsumo?: number | null;
   }) => Promise<{ ok: boolean; error?: string }>;
   addKit: (payload: {
     nome: string;
@@ -157,6 +173,8 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
   const [payables, setPayables] = useState<Payable[]>([]);
   const [pendingOrderItems, setPendingOrderItems] = useState<PurchaseOrderItem[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [notifState, setNotifState] = useState<NotifState>({ dismissed: [], read: [] });
   const [isReady, setIsReady] = useState(false);
 
   const loadData = async () => {
@@ -173,7 +191,9 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
             loadedReceivables,
             loadedPayables,
             loadedPendingItems,
-            loadedPurchaseOrders
+            loadedPurchaseOrders,
+            loadedSettings,
+            loadedNotifState
         ] = await Promise.all([
             ProductRepository.getAll(),
             CategoryRepository.getAll(),
@@ -184,7 +204,9 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
             FinancialRepository.getAllReceivables(),
             FinancialRepository.getAllPayables(),
             PurchaseOrderRepository.getPendingItems(),
-            PurchaseOrderRepository.getAllOrders()
+            PurchaseOrderRepository.getAllOrders(),
+            SettingsRepository.load(),
+            NotifStateRepository.load()
         ]);
 
         setProducts(loadedProducts);
@@ -197,6 +219,8 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
         setPayables(loadedPayables);
         setPendingOrderItems(loadedPendingItems);
         setPurchaseOrders(loadedPurchaseOrders);
+        setSettings(loadedSettings);
+        setNotifState(loadedNotifState);
         setIsReady(true);
     } catch (error: any) {
         console.error('Failed to load data from DB:', error);
@@ -260,6 +284,53 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
     return { ok: true };
   };
 
+  const updateSettings = async (newSettings: AppSettings) => {
+    try {
+      await SettingsRepository.save(newSettings);
+      setSettings(newSettings);
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao salvar configurações.');
+    }
+  };
+
+  const markNotificationRead = async (id: string) => {
+    try {
+      const next = await NotifStateRepository.markRead(notifState, id);
+      setNotifState(next);
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao marcar notificação.');
+    }
+  };
+
+  const dismissNotification = async (id: string) => {
+    try {
+      const next = await NotifStateRepository.dismiss(notifState, id);
+      setNotifState(next);
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao excluir notificação.');
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      const ids = notifications.map((n) => n.id);
+      const next = await NotifStateRepository.markAllRead(notifState, ids);
+      setNotifState(next);
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao marcar notificações.');
+    }
+  };
+
+  const dismissAllNotifications = async () => {
+    try {
+      const ids = notifications.map((n) => n.id);
+      const next = await NotifStateRepository.dismissAll(notifState, ids);
+      setNotifState(next);
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message ?? 'Erro ao excluir notificações.');
+    }
+  };
+
   const addProduct = async (payload: {
     nome: string;
     categoria: string;
@@ -267,6 +338,7 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
     estoqueAtual: number;
     estoqueMinimo: number;
     precoVenda: number;
+    tempoMedioConsumo?: number | null;
   }) => {
     if (!payload.nome.trim()) {
       return { ok: false, error: 'Informe o nome do produto.' };
@@ -296,7 +368,8 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       marca: payload.marca.trim(),
       estoqueAtual: payload.estoqueAtual,
       estoqueMinimo: payload.estoqueMinimo,
-      precoVenda: payload.precoVenda
+      precoVenda: payload.precoVenda,
+      tempoMedioConsumo: payload.tempoMedioConsumo ?? null,
     };
 
     try {
@@ -960,6 +1033,22 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
     return { ok: true };
   };
 
+  const dismissedIds = useMemo(
+    () => new Set(notifState.dismissed.map((e) => e.id)),
+    [notifState.dismissed]
+  );
+
+  const readNotificationIds = useMemo(
+    () => new Set(notifState.read.map((e) => e.id)),
+    [notifState.read]
+  );
+
+  const notifications = useMemo(
+    () => computeNotifications(products, sales, customers, receivables, payables, settings)
+          .filter((n) => !dismissedIds.has(n.id)),
+    [products, sales, customers, receivables, payables, settings, dismissedIds]
+  );
+
   const value = useMemo(
     () => ({
       products,
@@ -970,6 +1059,15 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       stockMoves,
       receivables,
       payables,
+      settings,
+      themeColor: getThemeColor(settings),
+      notifications,
+      readNotificationIds,
+      updateSettings,
+      markNotificationRead,
+      markAllNotificationsRead,
+      dismissNotification,
+      dismissAllNotifications,
       getProductStock,
       addProduct,
       addKit,
@@ -999,7 +1097,7 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       finalizePurchaseOrder,
       deletePurchaseOrder
     }),
-    [products, categories, brands, customers, sales, stockMoves, receivables, payables, pendingOrderItems, purchaseOrders]
+    [products, categories, brands, customers, sales, stockMoves, receivables, payables, pendingOrderItems, purchaseOrders, settings, notifications, readNotificationIds]
   );
 
   if (!isReady) return null;

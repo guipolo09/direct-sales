@@ -43,6 +43,7 @@ export const EstoqueScreen = () => {
   const [precoProduto, setPrecoProduto] = useState('');
   const [estoqueProduto, setEstoqueProduto] = useState('');
   const [estoqueMinimoProduto, setEstoqueMinimoProduto] = useState('');
+  const [tempoMedioConsumo, setTempoMedioConsumo] = useState('');
 
   const [nomeMarca, setNomeMarca] = useState('');
   const [nomeCategoria, setNomeCategoria] = useState('');
@@ -144,13 +145,15 @@ export const EstoqueScreen = () => {
 
   const handleAddProduto = async () => {
     try {
+      const tmc = Number(tempoMedioConsumo) || 0;
       const result = await addProduct({
         nome: nomeProduto,
         categoria: produtoCategoria ?? '',
         marca: produtoMarca ?? '',
         precoVenda: Number(precoProduto) || 0,
         estoqueAtual: Number(estoqueProduto) || 0,
-        estoqueMinimo: Number(estoqueMinimoProduto) || 0
+        estoqueMinimo: Number(estoqueMinimoProduto) || 0,
+        tempoMedioConsumo: tmc > 0 ? tmc : null,
       });
 
       if (!result.ok) {
@@ -162,6 +165,7 @@ export const EstoqueScreen = () => {
       setPrecoProduto('');
       setEstoqueProduto('');
       setEstoqueMinimoProduto('');
+      setTempoMedioConsumo('');
       Alert.alert('Produto cadastrado', 'Produto adicionado com sucesso.');
       resetCadastro();
     } catch (error: any) {
@@ -388,6 +392,13 @@ export const EstoqueScreen = () => {
             keyboardType="numeric"
             style={styles.input}
           />
+          <TextInput placeholderTextColor="#9ca3af"
+            value={tempoMedioConsumo}
+            onChangeText={setTempoMedioConsumo}
+            placeholder="Tempo medio de consumo (dias) — opcional"
+            keyboardType="numeric"
+            style={styles.input}
+          />
           <View style={styles.actionsRow}>
             <Pressable style={styles.secondaryButton} onPress={resetCadastro}>
               <Text style={styles.secondaryButtonText}>Cancelar</Text>
@@ -571,6 +582,9 @@ export const EstoqueScreen = () => {
             <Text style={[styles.info, low ? styles.warning : null]}>
               Estoque: {stock} | Minimo: {product.estoqueMinimo}
             </Text>
+            {product.tempoMedioConsumo ? (
+              <Text style={styles.info}>Tempo medio de consumo: {product.tempoMedioConsumo} dias</Text>
+            ) : null}
             {product.tipo === 'kit' ? (
               <View style={styles.kitCompositionBox}>
                 <Text style={styles.kitCompositionTitle}>Composicao do kit:</Text>

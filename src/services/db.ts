@@ -26,9 +26,17 @@ export const initDB = async () => {
         marca TEXT NOT NULL,
         estoqueAtual INTEGER NOT NULL DEFAULT 0,
         estoqueMinimo INTEGER NOT NULL DEFAULT 0,
-        precoVenda REAL NOT NULL
+        precoVenda REAL NOT NULL,
+        tempoMedioConsumo INTEGER DEFAULT NULL
       );
     `);
+
+    // Migration: add tempoMedioConsumo to existing databases
+    try {
+      await db.execAsync(`ALTER TABLE products ADD COLUMN tempoMedioConsumo INTEGER DEFAULT NULL;`);
+    } catch {
+      // Column already exists – migration already applied
+    }
 
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS kit_items (

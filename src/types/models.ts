@@ -9,6 +9,7 @@ export type Product = {
   estoqueAtual: number;
   estoqueMinimo: number;
   precoVenda: number;
+  tempoMedioConsumo?: number | null;
   kitItens?: Array<{
     productId: string;
     quantidade: number;
@@ -80,6 +81,49 @@ export type PurchaseOrder = {
   id: string;
   data: string;
   itens: PurchaseOrderItem[];
+};
+
+export type NotificationType = 'estoque_baixo' | 'consumo_cliente' | 'conta_receber' | 'conta_pagar';
+export type NotificationPriority = 'critico' | 'aviso' | 'info';
+
+export type AppNotification = {
+  id: string;
+  tipo: NotificationType;
+  prioridade: NotificationPriority;
+  titulo: string;
+  mensagem: string;
+  data: string;
+  diasRestantes: number;
+  produtoId?: string;
+  clienteId?: string;
+  contaId?: string;
+};
+
+export type NotificationSettings = {
+  ativo: boolean;
+  antecedenciaDias: number;
+};
+
+export type ThemeName = 'rose' | 'blue' | 'purple' | 'green' | 'orange' | 'slate';
+
+export type AppSettings = {
+  tema: ThemeName;
+  notificacoes: {
+    estoqueBaixo: NotificationSettings;
+    consumoCliente: NotificationSettings;
+    contaReceber: NotificationSettings;
+    contaPagar: NotificationSettings;
+  };
+};
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  tema: 'rose',
+  notificacoes: {
+    estoqueBaixo:   { ativo: true, antecedenciaDias: 0  },
+    consumoCliente: { ativo: true, antecedenciaDias: 7  },
+    contaReceber:   { ativo: true, antecedenciaDias: 3  },
+    contaPagar:     { ativo: true, antecedenciaDias: 7  },
+  },
 };
 
 export type RegisterSalePayload = {

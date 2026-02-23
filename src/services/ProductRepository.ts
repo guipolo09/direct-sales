@@ -6,8 +6,8 @@ export const ProductRepository = {
         const db = await getDB();
         await db.withTransactionAsync(async () => {
             await db.runAsync(
-                'INSERT INTO products (id, nome, tipo, categoria, marca, estoqueAtual, estoqueMinimo, precoVenda) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                [product.id, product.nome, product.tipo, product.categoria, product.marca, product.estoqueAtual, product.estoqueMinimo, product.precoVenda]
+                'INSERT INTO products (id, nome, tipo, categoria, marca, estoqueAtual, estoqueMinimo, precoVenda, tempoMedioConsumo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [product.id, product.nome, product.tipo, product.categoria, product.marca, product.estoqueAtual, product.estoqueMinimo, product.precoVenda, product.tempoMedioConsumo ?? null]
             );
 
             if (product.kitItens && product.kitItens.length > 0) {
@@ -25,8 +25,8 @@ export const ProductRepository = {
         const db = await getDB();
         await db.withTransactionAsync(async () => {
             await db.runAsync(
-                'UPDATE products SET nome = ?, tipo = ?, categoria = ?, marca = ?, estoqueAtual = ?, estoqueMinimo = ?, precoVenda = ? WHERE id = ?',
-                [product.nome, product.tipo, product.categoria, product.marca, product.estoqueAtual, product.estoqueMinimo, product.precoVenda, product.id]
+                'UPDATE products SET nome = ?, tipo = ?, categoria = ?, marca = ?, estoqueAtual = ?, estoqueMinimo = ?, precoVenda = ?, tempoMedioConsumo = ? WHERE id = ?',
+                [product.nome, product.tipo, product.categoria, product.marca, product.estoqueAtual, product.estoqueMinimo, product.precoVenda, product.tempoMedioConsumo ?? null, product.id]
             );
 
             // Update kit items if needed (delete all and recreate is easiest for now)

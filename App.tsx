@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AppStoreProvider } from './src/store/AppStore';
+import { AppStoreProvider, useAppStore } from './src/store/AppStore';
 import { CrmScreen } from './src/screens/CrmScreen';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { EstoqueScreen } from './src/screens/EstoqueScreen';
@@ -22,33 +22,40 @@ const TAB_ICONS: Record<string, string> = {
   Financeiro: 'cash-multiple',
 };
 
+const AppNavigator = () => {
+  const { themeColor } = useAppStore();
+  return (
+    <NavigationContainer>
+      <StatusBar style="dark" />
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarActiveTintColor: themeColor,
+          tabBarInactiveTintColor: '#6b7280',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons
+              name={TAB_ICONS[route.name] as any}
+              size={size}
+              color={color}
+            />
+          ),
+        })}
+      >
+        <Tab.Screen name="Dashboard" component={DashboardScreen} />
+        <Tab.Screen name="Estoque" component={EstoqueScreen} />
+        <Tab.Screen name="CRM" component={CrmScreen} />
+        <Tab.Screen name="Vendas" component={VendasScreen} />
+        <Tab.Screen name="Pedidos" component={PedidosScreen} />
+        <Tab.Screen name="Financeiro" component={FinanceiroScreen} />
+      </Tab.Navigator>
+    </NavigationContainer>
+  );
+};
+
 export default function App() {
   return (
     <AppStoreProvider>
-      <NavigationContainer>
-        <StatusBar style="dark" />
-        <Tab.Navigator
-          screenOptions={({ route }) => ({
-            headerShown: false,
-            tabBarActiveTintColor: '#be123c',
-            tabBarInactiveTintColor: '#6b7280',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons
-                name={TAB_ICONS[route.name] as any}
-                size={size}
-                color={color}
-              />
-            ),
-          })}
-        >
-          <Tab.Screen name="Dashboard" component={DashboardScreen} />
-          <Tab.Screen name="Estoque" component={EstoqueScreen} />
-          <Tab.Screen name="CRM" component={CrmScreen} />
-          <Tab.Screen name="Vendas" component={VendasScreen} />
-          <Tab.Screen name="Pedidos" component={PedidosScreen} />
-          <Tab.Screen name="Financeiro" component={FinanceiroScreen} />
-        </Tab.Navigator>
-      </NavigationContainer>
+      <AppNavigator />
     </AppStoreProvider>
   );
 }
